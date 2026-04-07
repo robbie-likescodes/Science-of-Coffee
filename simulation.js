@@ -102,7 +102,7 @@ export function runSimulation(processKey, params) {
 
   const last = timeline[timeline.length - 1];
   const adjusted = { ...last };
-  const fe = filterEffects[params.filterType] || filterEffects.paper;
+  const fe = filterCoeff;
 
   adjusted.body = clamp(adjusted.body + fe.body);
   adjusted.polyphenols = clamp(adjusted.polyphenols + fe.polyphenols);
@@ -141,6 +141,72 @@ export function runSimulation(processKey, params) {
       return acc;
     }, {}),
     summary
+  };
+}
+
+function deriveModel(processKey, params) {
+  const method = processPresets[processKey];
+  const c = method.coeff;
+  const grindFine = 1 - s(params.grindSize);
+  const fines = s(params.fines);
+  const tempFactor = clamp((params.temperature - 80) / 20, 0.2, 1.2);
+  const pressureFactor = clamp((params.pressure - 1) / 9, 0, 1.5);
+  const agitation = s(params.agitation);
+  const preinfusion = clamp(params.preinfusion / Math.max(params.contactTime, 1), 0, 0.6);
+  const extractionSpeed =
+    c.speed *
+    (0.58 + 0.52 * grindFine + 0.24 * fines + 0.33 * agitation + 0.35 * tempFactor + 0.18 * pressureFactor + 0.1 * preinfusion);
+  const concentration = clamp((params.dose / params.brewRatio) / 2.2, 0.35, 3.2);
+  const unevenness = clamp((1 - s(params.bedUniformity)) * 0.55 + s(params.channelingRisk) * 0.75, 0, 1.35);
+  const extractionEff = clamp((params.extractionEfficiency - 40) / 55, 0, 1.1);
+  const roast = s(params.roastLevel);
+  const minerals = s(params.mineralStrength);
+  const buffering = s(params.acidityBuffering);
+  const bodyBias = s(params.bodyEmphasis);
+  const clarityBias = s(params.clarityEmphasis);
+
+  return {
+    method,
+    c,
+    grindFine,
+    fines,
+    tempFactor,
+    pressureFactor,
+    agitation,
+    preinfusion,
+    extractionSpeed,
+    concentration,
+    unevenness,
+    extractionEff,
+    roast,
+    minerals,
+    buffering,
+    bodyBias,
+    clarityBias,
+    filterCoeff: filterEffects[params.filterType] || filterEffects.paper
+  };
+}
+
+export function getModelDerivatives(processKey, params) {
+  const model = deriveModel(processKey, params);
+  return {
+    extractionSpeed: model.extractionSpeed,
+    tempFactor: model.tempFactor,
+    pressureFactor: model.pressureFactor,
+    agitationFactor: model.agitation,
+    finesFactor: model.fines,
+    grindFineFactor: model.grindFine,
+    preinfusionFactor: model.preinfusion,
+    concentrationFactor: model.concentration,
+    unevennessFactor: model.unevenness,
+    extractionEffFactor: model.extractionEff,
+    roastFactor: model.roast,
+    mineralFactor: model.minerals,
+    bufferingFactor: model.buffering,
+    bodyBiasFactor: model.bodyBias,
+    clarityBiasFactor: model.clarityBias,
+    methodCoeff: model.c,
+    filterEffect: model.filterCoeff
   };
 }
 
