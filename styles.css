@@ -204,17 +204,27 @@ canvas {
   padding: 0.65rem;
   background: rgba(15, 23, 42, 0.88);
   backdrop-filter: blur(3px);
+  resize: both;
+  overflow: hidden;
+  min-width: 200px;
+  min-height: 200px;
+  max-width: 50vw;
+  max-height: 70vh;
 }
 
-.radar-overlay h2 {
+.radar-overlay-title {
   font-size: 0.86rem;
   letter-spacing: 0.02em;
   color: var(--muted);
+  cursor: move;
+  user-select: none;
 }
 
 .radar-overlay canvas {
   margin-top: 0.45rem;
   width: 100%;
+  height: calc(100% - 1.5rem);
+  min-height: 150px;
   aspect-ratio: 1 / 1;
 }
 
@@ -339,9 +349,5 @@ canvas {
     width: min(240px, calc(100vw - 1rem));
     top: 0.5rem;
     right: 0.5rem;
-  }
-  .header-actions {
-    justify-items: stretch;
-    width: 100%;
   }
 }
