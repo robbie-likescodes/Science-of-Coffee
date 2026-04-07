@@ -253,7 +253,9 @@ export function renderModelDocumentation(tocEl, contentEl) {
       note.innerHTML = `<h4>Educational assumptions</h4>
       <ul class="eq-vars">
         <li>Curves are normalized 0-100 proxies, not direct mg/L chemistry.</li>
-        <li>Sensory outputs are weighted blends of proxies and user controls.</li>
+        <li>Sensory outputs are weighted blends of chemistry proxies and process heuristics.</li>
+        <li>Temperature uses an Arrhenius-like heuristic and is not a fitted kinetic constant.</li>
+        <li>Recommended stop window is computed from a balance score (sweetness/aroma/acidity minus bitterness/astringency/burnt), not from lab target extraction yield.</li>
         <li>Method coefficients encode style tendencies rather than measured constants.</li>
       </ul>`;
       note.appendChild(makeTag("Heuristic"));
