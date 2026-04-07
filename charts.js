@@ -53,6 +53,20 @@ function xFromPoint(point, xMode) {
   return xMode === "actual" ? point.seconds : point.progress;
 }
 
+function formatSecondsLabel(seconds) {
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.round((seconds % 3600) / 60);
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
+  }
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
+}
+
+
 function drawGuidanceZones(ctx, pad, cw, ch, guidance, xMax, xMode) {
   const zones = [
     { ...guidance.early, color: "rgba(71, 133, 255, 0.15)" },
@@ -135,6 +149,15 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContex
   }
 
   ctx.fillStyle = "#8ea5cf";
+  ctx.font = "11px sans-serif";
+  for (let i = 0; i <= 6; i++) {
+    const tickValue = (xMax / 6) * i;
+    const x = pad.l + (cw / 6) * i;
+    const label = xMode === "actual" ? formatSecondsLabel(tickValue) : tickValue.toFixed(2);
+    ctx.fillText(label, x - 12, h - pad.b + 16);
+  }
+
+  ctx.fillStyle = "#8ea5cf";
   ctx.font = "12px sans-serif";
   for (let i = 0; i <= 5; i++) {
     const value = 100 - i * 20;
@@ -162,7 +185,7 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContex
 
   ctx.setLineDash([]);
   ctx.fillStyle = "#9db3da";
-  ctx.fillText(xMode === "actual" ? "Extraction time (seconds)" : "Normalized extraction progress", w / 2 - 78, h - 12);
+  ctx.fillText(xMode === "actual" ? "Extraction time" : "Normalized extraction progress", w / 2 - 56, h - 12);
 }
 
 export function drawRadarChart(canvas, profile, options = {}) {

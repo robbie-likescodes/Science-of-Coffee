@@ -1,4 +1,4 @@
-import { brewMethodPresets } from "./presets.js";
+import { brewMethodPresets, clampValueForControl, controlConfig } from "./presets.js";
 import { getControlEquationMeta, getModelDerivatives, runSimulation } from "./simulation.js";
 import { GRAPH_MODES, X_AXIS_MODES, drawRadarChart, drawTimeChart, getDefaultVisibleCurves, getSeriesForMode } from "./charts.js";
 import {
@@ -11,12 +11,15 @@ import {
   renderEquations,
   renderMethodDescription,
   renderModelDocumentation,
+  renderVariableDocumentation,
   renderSummary
 } from "./ui.js";
+import { variableDocs } from "./variableDocs.js";
 
 const processSelect = document.getElementById("processSelect");
 const processDescription = document.getElementById("processDescription");
 const controlsContainer = document.getElementById("controlsContainer");
+const resetControlsButton = document.getElementById("resetControlsButton");
 const summaryText = document.getElementById("summaryText");
 const interpretationBox = document.getElementById("interpretationBox");
 const equationsContent = document.getElementById("equationsContent");
@@ -33,6 +36,35 @@ const modelView = document.getElementById("modelView");
 const modelToc = document.getElementById("modelToc");
 const modelContent = document.getElementById("modelContent");
 const processPickerWrap = document.getElementById("processPickerWrap");
+const variableView = document.getElementById("variableView");
+const variableContent = document.getElementById("variableContent");
+
+const coreElements = {
+  processSelect,
+  processDescription,
+  controlsContainer,
+  summaryText,
+  interpretationBox,
+  equationsContent,
+  statsEl,
+  timeChart,
+  radarChart,
+  graphModeControls,
+  axisModeControls,
+  curveControls,
+  simulatorView,
+  processPickerWrap,
+  variableView,
+  variableContent
+};
+
+const missingCoreElements = Object.entries(coreElements)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missingCoreElements.length) {
+  console.error("[coffee-sim] Missing required DOM elements:", missingCoreElements.join(", "));
+}
 
 const coreElements = {
   processSelect,
@@ -94,15 +126,17 @@ function renderGraphControlState() {
 function renderViewState() {
   if (!viewTabs || !simulatorView) return;
   initViewTabs(viewTabs, state.view, (nextView) => {
-    state.view = nextView;
-    renderViewState();
+    window.location.hash = nextView === "model" ? "#model" : "#simulator";
   });
 
   const showSimulator = state.view === "simulator";
+  const showModel = state.view === "model";
+  const showVariable = state.view === "variable";
   simulatorView.classList.toggle("hidden", !showSimulator);
   if (modelView) modelView.classList.toggle("hidden", showSimulator);
   processPickerWrap.classList.toggle("hidden", !showSimulator);
   processDescription.classList.toggle("hidden", !showSimulator);
+  if (radarOverlay) radarOverlay.classList.toggle("hidden", !showSimulator);
 }
 
 function rerender() {
@@ -349,15 +383,36 @@ function emitProcessPopup(processKey, previousProcessKey) {
 function setProcess(processKey) {
   const previousProcess = state.process;
   state.process = processKey;
-  state.params = { ...brewMethodPresets[processKey].defaults };
   renderMethodDescription(processDescription, processKey);
-  renderControls(controlsContainer, state.params, (key, value, meta) => {
-    const previousParams = { ...state.params };
-    state.params[key] = value;
-    emitEquationPopup(key, previousParams, state.params, meta?.anchorEl);
-    rerender();
-  });
+  applyMethodDefaults(processKey);
   emitProcessPopup(processKey, previousProcess);
+}
+
+function applyMethodDefaults(processKey) {
+  const defaults = brewMethodPresets[processKey]?.defaults;
+  if (!defaults || !controlsContainer) return;
+  state.params = { ...defaults };
+  processSelect.value = processKey;
+
+  renderControls(
+    controlsContainer,
+    state.params,
+    processKey,
+    (key, value, details = {}) => {
+      const previousParams = { ...state.params };
+      state.params[key] = clampValueForControl(state.process, key, value);
+      emitEquationPopup(key, previousParams, state.params, details.anchorEl);
+      rerender();
+    },
+    (key) => {
+      window.location.hash = `#variable/${key}`;
+    }
+  );
+
+  if (resetControlsButton) {
+    resetControlsButton.onclick = () => applyMethodDefaults(state.process);
+  }
+
   rerender();
 }
 
