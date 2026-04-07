@@ -38,6 +38,8 @@ h1, h2, h3, p { margin: 0; }
   gap: 1rem;
   align-items: end;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 40;
 }
 
 .app-header h1 { font-size: 1.35rem; }
@@ -197,9 +199,9 @@ canvas {
 
 .radar-overlay {
   position: fixed;
-  top: 1rem;
+  top: 5.2rem;
   right: 1rem;
-  z-index: 25;
+  z-index: 20;
   width: min(290px, calc(100vw - 2rem));
   padding: 0.65rem;
   background: rgba(15, 23, 42, 0.88);
@@ -218,6 +220,10 @@ canvas {
   color: var(--muted);
   cursor: move;
   user-select: none;
+}
+
+.radar-overlay-title.dragging {
+  cursor: grabbing;
 }
 
 .radar-overlay canvas {

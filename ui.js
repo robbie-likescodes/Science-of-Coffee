@@ -264,13 +264,15 @@ export function renderModelDocumentation(tocEl, contentEl) {
   });
 }
 
-export function renderSummary(summaryEl, statsEl, text, profile) {
+export function renderSummary(summaryEl, interpretationEl, statsEl, text, profile, interpretation) {
   summaryEl.textContent = text;
-  interpretationEl.innerHTML = `
-    <strong>${interpretation.title}</strong>
-    <div>${interpretation.windowText}</div>
-    <ul>${interpretation.bullets.map((b) => `<li>${b}</li>`).join("")}</ul>
-  `;
+  if (interpretationEl && interpretation) {
+    interpretationEl.innerHTML = `
+      <strong>${interpretation.title}</strong>
+      <div>${interpretation.windowText}</div>
+      <ul>${interpretation.bullets.map((b) => `<li>${b}</li>`).join("")}</ul>
+    `;
+  }
 
   statsEl.innerHTML = "";
   ["acidity", "sweetness", "bitterness", "body", "polyphenols", "aroma", "clarity", "floralFruit", "chocoNut"].forEach((k) => {
