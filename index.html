@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coffee Process & Extraction Characteristics Simulator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header panel">
+      <div>
+        <h1>Coffee Process & Extraction Characteristics Simulator</h1>
+        <p class="subtitle">Educational heuristic model for extraction behavior and flavor outcomes.</p>
+      </div>
+      <label class="process-picker">
+        <span>Process Type</span>
+        <select id="processSelect"></select>
+      </label>
+    </header>
+
+    <main class="layout">
+      <aside class="panel controls" id="controlsPanel">
+        <h2>Brewing Variables</h2>
+        <p class="hint">Adjust controls to see live extraction and profile changes.</p>
+        <div id="controlsContainer"></div>
+      </aside>
+
+      <section class="panel charts">
+        <div class="chart-card">
+          <h2>Extraction Intensity Over Normalized Time</h2>
+          <canvas id="timeChart" width="980" height="380" aria-label="Time extraction chart"></canvas>
+        </div>
+        <div class="chart-card">
+          <h2>Final Flavor Profile (0–100)</h2>
+          <canvas id="radarChart" width="980" height="420" aria-label="Final profile radar chart"></canvas>
+        </div>
+      </section>
+    </main>
+
+    <section class="panel summary" id="summaryPanel">
+      <h2>Interpretation</h2>
+      <p id="summaryText"></p>
+      <div id="stats" class="stats-grid"></div>
+    </section>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
