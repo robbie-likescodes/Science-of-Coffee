@@ -53,6 +53,14 @@ function xFromPoint(point, xMode) {
   return xMode === "actual" ? point.seconds : point.progress;
 }
 
+function formatSecondsLabel(seconds) {
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
+}
+
+
 function drawGuidanceZones(ctx, pad, cw, ch, guidance, xMax, xMode) {
   const zones = [
     { ...guidance.early, color: "rgba(71, 133, 255, 0.15)" },
@@ -132,6 +140,15 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContex
     ctx.lineTo(x, pad.t + ch);
     ctx.strokeStyle = "rgba(33,50,83,0.45)";
     ctx.stroke();
+  }
+
+  ctx.fillStyle = "#8ea5cf";
+  ctx.font = "11px sans-serif";
+  for (let i = 0; i <= 6; i++) {
+    const tickValue = (xMax / 6) * i;
+    const x = pad.l + (cw / 6) * i;
+    const label = xMode === "actual" ? formatSecondsLabel(tickValue) : tickValue.toFixed(2);
+    ctx.fillText(label, x - 12, h - pad.b + 16);
   }
 
   ctx.fillStyle = "#8ea5cf";

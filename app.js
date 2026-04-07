@@ -1,4 +1,4 @@
-import { brewMethodPresets } from "./presets.js";
+import { brewMethodPresets, clampValueForControl, controlConfig } from "./presets.js";
 import { getControlEquationMeta, getModelDerivatives, runSimulation } from "./simulation.js";
 import { GRAPH_MODES, X_AXIS_MODES, drawRadarChart, drawTimeChart, getDefaultVisibleCurves, getSeriesForMode } from "./charts.js";
 import {
@@ -17,6 +17,7 @@ import {
 const processSelect = document.getElementById("processSelect");
 const processDescription = document.getElementById("processDescription");
 const controlsContainer = document.getElementById("controlsContainer");
+const resetControlsButton = document.getElementById("resetControlsButton");
 const summaryText = document.getElementById("summaryText");
 const interpretationBox = document.getElementById("interpretationBox");
 const equationsContent = document.getElementById("equationsContent");
@@ -123,6 +124,53 @@ function rerender() {
 function initRadarOverlayInteractions() {
   if (!radarOverlay) return;
   const title = radarOverlay.querySelector(".radar-overlay-title") || radarOverlay.querySelector("h2");
+  if (!title) return;
+
+  let dragging = false;
+  let startX = 0;
+  let startY = 0;
+  let baseLeft = 0;
+  let baseTop = 0;
+
+  const onMove = (event) => {
+    if (!dragging) return;
+    const nextLeft = Math.min(
+      Math.max(8, baseLeft + (event.clientX - startX)),
+      window.innerWidth - radarOverlay.offsetWidth - 8
+    );
+    const nextTop = Math.min(
+      Math.max(8, baseTop + (event.clientY - startY)),
+      window.innerHeight - radarOverlay.offsetHeight - 8
+    );
+    radarOverlay.style.left = `${nextLeft}px`;
+    radarOverlay.style.top = `${nextTop}px`;
+    radarOverlay.style.right = "auto";
+  };
+
+  const onUp = () => {
+    dragging = false;
+    title.classList.remove("dragging");
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+  };
+
+  title.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    dragging = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    baseLeft = radarOverlay.offsetLeft;
+    baseTop = radarOverlay.offsetTop;
+    title.classList.add("dragging");
+    title.setPointerCapture(event.pointerId);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  });
+}
+
+function initRadarOverlayInteractions() {
+  if (!radarOverlay) return;
+  const title = radarOverlay.querySelector(".radar-overlay-title");
   if (!title) return;
 
   let dragging = false;
@@ -349,16 +397,9 @@ function emitProcessPopup(processKey, previousProcessKey) {
 function setProcess(processKey) {
   const previousProcess = state.process;
   state.process = processKey;
-  state.params = { ...brewMethodPresets[processKey].defaults };
   renderMethodDescription(processDescription, processKey);
-  renderControls(controlsContainer, state.params, (key, value, meta) => {
-    const previousParams = { ...state.params };
-    state.params[key] = value;
-    emitEquationPopup(key, previousParams, state.params, meta?.anchorEl);
-    rerender();
-  });
+  applyMethodDefaults(processKey);
   emitProcessPopup(processKey, previousProcess);
-  rerender();
 }
 
 if (missingCoreElements.length === 0) {
