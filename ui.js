@@ -2,6 +2,8 @@ import { brewMethodPresets, controlConfig, getControlSpec } from "./presets.js";
 import { equationLibrary, filterEffects, modelSections } from "./model.js";
 
 const numberFormat = (v) => (Number.isInteger(v) ? String(v) : Number(v).toFixed(1));
+const celsiusToFahrenheit = (celsius) => (celsius * 9) / 5 + 32;
+const fahrenheitToCelsius = (fahrenheit) => ((fahrenheit - 32) * 5) / 9;
 
 export function initProcessSelector(selectEl, onChange) {
   if (!selectEl) {
@@ -53,7 +55,7 @@ export function renderControls(container, state, processKey, onInput) {
     title.textContent = label;
     const value = document.createElement("small");
     value.id = `value-${key}`;
-    value.textContent = state[key];
+    value.textContent = key === "temperature" ? numberFormat(celsiusToFahrenheit(state[key])) : state[key];
 
     head.append(title, value);
     wrapper.appendChild(head);
@@ -72,13 +74,15 @@ export function renderControls(container, state, processKey, onInput) {
     } else {
       const input = document.createElement("input");
       input.type = "range";
-      input.min = String(spec.min);
-      input.max = String(spec.max);
+      const isTemperature = key === "temperature";
+      input.min = String(isTemperature ? celsiusToFahrenheit(spec.min) : spec.min);
+      input.max = String(isTemperature ? celsiusToFahrenheit(spec.max) : spec.max);
       input.step = String(spec.step);
-      input.value = state[key];
+      input.value = String(isTemperature ? celsiusToFahrenheit(state[key]) : state[key]);
       input.addEventListener("input", () => {
-        const parsed = spec.step < 1 ? parseFloat(input.value) : parseInt(input.value, 10);
-        value.textContent = numberFormat(parsed);
+        const parsedDisplay = spec.step < 1 ? parseFloat(input.value) : parseInt(input.value, 10);
+        const parsed = isTemperature ? fahrenheitToCelsius(parsedDisplay) : parsedDisplay;
+        value.textContent = numberFormat(parsedDisplay);
         onInput(key, parsed, { anchorEl: wrapper, inputType: "range" });
       });
       wrapper.appendChild(input);
