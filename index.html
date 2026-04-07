@@ -33,12 +33,13 @@
           <div id="curveControls" class="curve-controls" aria-label="Curve legend and visibility"></div>
           <canvas id="timeChart" width="980" height="380" aria-label="Time extraction chart"></canvas>
         </div>
-        <div class="chart-card">
-          <h2>Final Flavor Profile (0–100)</h2>
-          <canvas id="radarChart" width="980" height="420" aria-label="Final profile radar chart"></canvas>
-        </div>
       </section>
     </main>
+
+    <aside class="panel radar-overlay" aria-live="polite">
+      <h2>Flavor Profile</h2>
+      <canvas id="radarChart" width="300" height="300" aria-label="Final profile radar chart"></canvas>
+    </aside>
 
     <section class="panel summary" id="summaryPanel">
       <h2>Interpretation</h2>

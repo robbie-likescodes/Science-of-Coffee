@@ -45,7 +45,7 @@ function renderGraphControlState() {
 function rerender() {
   const result = runSimulation(state.process, state.params);
   drawTimeChart(timeChart, result.timeline, state.graphMode, state.visibleCurves);
-  drawRadarChart(radarChart, result.finalProfile);
+  drawRadarChart(radarChart, result.finalProfile, { compact: true });
   renderSummary(summaryText, statsEl, result.summary, result.finalProfile);
 }
 
