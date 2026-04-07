@@ -94,6 +94,17 @@ select {
   overflow: auto;
 }
 
+
+.method-hint {
+  margin-top: 0.35rem;
+}
+
+.reset-btn {
+  margin-top: 0.55rem;
+  width: 100%;
+  text-align: center;
+}
+
 #controlsContainer {
   margin-top: 0.75rem;
   display: grid;
@@ -321,6 +332,28 @@ canvas {
   color: #d7e7ff;
 }
 
+.eq-math {
+  margin: 0;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid #315789;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #0a1730 0%, #0a1225 100%);
+  color: #eaf3ff;
+  font-size: 1.12rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.eq-math-fallback {
+  font-family: "Cambria Math", "STIX Two Text", "Times New Roman", serif;
+  white-space: pre-wrap;
+}
+
+.eq-note {
+  color: #b8cfef;
+  font-size: 0.9rem;
+}
+
 .eq-vars {
   margin: 0;
   padding-left: 1.1rem;
@@ -410,5 +443,25 @@ canvas {
 .interpretation-box li { margin: 0.15rem 0; }
 
 .equations-content h3 { margin-top: 0.5rem; font-size: 1rem; }
-.equations-content ul { margin: 0.35rem 0 0.7rem; padding-left: 1.1rem; color: #cde1ff; }
-.equations-content li { margin: 0.2rem 0; }
+
+.equation-group {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.equation-group > h3 {
+  margin: 0.4rem 0 0;
+  font-size: 1.02rem;
+  color: #d7e9ff;
+}
+
+.eq-legend {
+  margin-top: 0.3rem;
+  border: 1px dashed #3a6198;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  color: #bbd5f8;
+  background: rgba(12, 26, 49, 0.55);
+  font-size: 0.88rem;
+}

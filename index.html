@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Coffee Process & Extraction Characteristics Simulator</title>
     <link rel="stylesheet" href="styles.css" />
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [["\\(", "\\)"], ["$", "$"]], displayMath: [["\\[", "\\]"]] },
+        svg: { fontCache: "global" }
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
   </head>
   <body>
     <header class="app-header panel">
@@ -27,6 +34,8 @@
         <aside class="panel controls" id="controlsPanel">
           <h2>Brewing Variables</h2>
           <p class="hint">Adjust controls to see live extraction and profile changes.</p>
+          <p class="hint method-hint">Ranges and defaults follow the selected brew method.</p>
+          <button id="resetControlsButton" class="mode-btn reset-btn" type="button">Reset to Brew Method Defaults</button>
           <div id="controlsContainer"></div>
         </aside>
 
