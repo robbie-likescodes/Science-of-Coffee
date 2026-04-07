@@ -94,6 +94,17 @@ select {
   overflow: auto;
 }
 
+
+.method-hint {
+  margin-top: 0.35rem;
+}
+
+.reset-btn {
+  margin-top: 0.55rem;
+  width: 100%;
+  text-align: center;
+}
+
 #controlsContainer {
   margin-top: 0.75rem;
   display: grid;
