@@ -1,6 +1,7 @@
-export const processPresets = {
+export const brewMethodPresets = {
   espresso: {
     label: "Espresso",
+    description: "Short, concentrated pressure brew with high intensity and body.",
     defaults: {
       dose: 18,
       brewRatio: 2.2,
@@ -26,6 +27,7 @@ export const processPresets = {
   },
   pourOver: {
     label: "Pour Over",
+    description: "Clean, clarity-focused percolation brew with longer contact and controlled flow.",
     defaults: {
       dose: 20,
       brewRatio: 16,
@@ -51,6 +53,7 @@ export const processPresets = {
   },
   frenchPress: {
     label: "French Press",
+    description: "Immersion brew with fuller texture, heavier body, and reduced clarity.",
     defaults: {
       dose: 30,
       brewRatio: 15,
@@ -76,6 +79,7 @@ export const processPresets = {
   },
   siphon: {
     label: "Siphon",
+    description: "Vacuum immersion/percolation hybrid with aromatic emphasis and balanced body.",
     defaults: {
       dose: 22,
       brewRatio: 14,
@@ -101,6 +105,7 @@ export const processPresets = {
   },
   aeroPress: {
     label: "AeroPress",
+    description: "Fast immersion-pressure hybrid with versatile strength and flavor balance.",
     defaults: {
       dose: 17,
       brewRatio: 13,
@@ -126,6 +131,7 @@ export const processPresets = {
   },
   coldBrew: {
     label: "Cold Brew",
+    description: "Low-temperature long extraction emphasizing smoothness and lower perceived acidity.",
     defaults: {
       dose: 80,
       brewRatio: 10,
@@ -150,6 +156,8 @@ export const processPresets = {
     coeff: { speed: 0.36, clarity: 0.82, body: 1.12, bitterness: 0.7, aroma: 0.74 }
   }
 };
+
+export const processPresets = brewMethodPresets;
 
 export const controlConfig = [
   ["dose", "Dose (g)", 8, 90, 1],

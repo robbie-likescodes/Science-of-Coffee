@@ -12,17 +12,37 @@
         <h1>Coffee Process & Extraction Characteristics Simulator</h1>
         <p class="subtitle">Educational heuristic model for extraction behavior and flavor outcomes.</p>
       </div>
-      <label class="process-picker">
-        <span>Process Type</span>
-        <select id="processSelect"></select>
-      </label>
+      <div class="header-actions">
+        <nav id="viewTabs" class="view-tabs" aria-label="Primary view navigation"></nav>
+        <label class="process-picker" id="processPickerWrap">
+          <span>Brew Method</span>
+          <select id="processSelect"></select>
+        </label>
+      </div>
+      <p id="processDescription" class="subtitle"></p>
     </header>
 
-    <main class="layout">
-      <aside class="panel controls" id="controlsPanel">
-        <h2>Brewing Variables</h2>
-        <p class="hint">Adjust controls to see live extraction and profile changes.</p>
-        <div id="controlsContainer"></div>
+    <main id="simulatorView" class="view-screen">
+      <div class="layout">
+        <aside class="panel controls" id="controlsPanel">
+          <h2>Brewing Variables</h2>
+          <p class="hint">Adjust controls to see live extraction and profile changes.</p>
+          <div id="controlsContainer"></div>
+        </aside>
+
+        <section class="panel charts">
+          <div class="chart-card">
+            <h2>Extraction Intensity Over Normalized Time</h2>
+            <div id="graphModeControls" class="mode-toggle" aria-label="Graph mode toggle"></div>
+            <div id="curveControls" class="curve-controls" aria-label="Curve legend and visibility"></div>
+            <canvas id="timeChart" width="980" height="380" aria-label="Time extraction chart"></canvas>
+          </div>
+        </section>
+      </div>
+
+      <aside class="panel radar-overlay" aria-live="polite">
+        <h2>Flavor Profile</h2>
+        <canvas id="radarChart" width="300" height="300" aria-label="Final profile radar chart"></canvas>
       </aside>
 
       <section class="panel charts">
