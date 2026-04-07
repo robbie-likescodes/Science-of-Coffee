@@ -1,9 +1,17 @@
-import { processPresets } from "./presets.js";
+import { brewMethodPresets } from "./presets.js";
 import { runSimulation } from "./simulation.js";
 import { GRAPH_MODES, drawRadarChart, drawTimeChart, getDefaultVisibleCurves, getSeriesForMode } from "./charts.js";
-import { initGraphModeControls, initProcessSelector, renderControls, renderCurveControls, renderSummary } from "./ui.js";
+import {
+  initGraphModeControls,
+  initProcessSelector,
+  renderControls,
+  renderCurveControls,
+  renderMethodDescription,
+  renderSummary
+} from "./ui.js";
 
 const processSelect = document.getElementById("processSelect");
+const processDescription = document.getElementById("processDescription");
 const controlsContainer = document.getElementById("controlsContainer");
 const summaryText = document.getElementById("summaryText");
 const statsEl = document.getElementById("stats");
@@ -16,7 +24,7 @@ const state = {
   process: "espresso",
   graphMode: "flavor",
   visibleCurves: getDefaultVisibleCurves("flavor"),
-  params: { ...processPresets.espresso.defaults }
+  params: { ...brewMethodPresets.espresso.defaults }
 };
 
 function renderGraphControlState() {
@@ -43,7 +51,8 @@ function rerender() {
 
 function setProcess(processKey) {
   state.process = processKey;
-  state.params = { ...processPresets[processKey].defaults };
+  state.params = { ...brewMethodPresets[processKey].defaults };
+  renderMethodDescription(processDescription, processKey);
   renderControls(controlsContainer, state.params, (key, value) => {
     state.params[key] = value;
     rerender();

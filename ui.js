@@ -1,15 +1,20 @@
-import { controlConfig, processPresets } from "./presets.js";
+import { brewMethodPresets, controlConfig } from "./presets.js";
 
 const numberFormat = (v) => (Number.isInteger(v) ? String(v) : Number(v).toFixed(1));
 
 export function initProcessSelector(selectEl, onChange) {
-  Object.entries(processPresets).forEach(([key, value]) => {
+  Object.entries(brewMethodPresets).forEach(([key, value]) => {
     const opt = document.createElement("option");
     opt.value = key;
     opt.textContent = value.label;
     selectEl.appendChild(opt);
   });
   selectEl.addEventListener("change", () => onChange(selectEl.value));
+}
+
+export function renderMethodDescription(descriptionEl, processKey) {
+  if (!descriptionEl) return;
+  descriptionEl.textContent = brewMethodPresets[processKey]?.description || "";
 }
 
 export function renderControls(container, state, onInput) {
