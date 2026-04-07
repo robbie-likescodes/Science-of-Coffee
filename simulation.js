@@ -1,36 +1,5 @@
 import { processPresets } from "./presets.js";
-
-const characteristics = [
-  "acidity",
-  "sweetness",
-  "bitterness",
-  "body",
-  "aroma",
-  "clarity",
-  "polyphenols",
-  "roastiness",
-  "floralFruit",
-  "chocoNut"
-];
-
-const filterEffects = {
-  paper: { body: -12, clarity: 14, polyphenols: -14, aroma: 2, lipids: -16 },
-  cloth: { body: -4, clarity: 8, polyphenols: -6, aroma: 4, lipids: -6 },
-  metal: { body: 12, clarity: -8, polyphenols: 10, aroma: 0, lipids: 10 }
-};
-
-const clamp = (x, min = 0, max = 100) => Math.max(min, Math.min(max, x));
-const s = (x) => clamp(x / 100, 0, 1);
-
-function sigmoid(t, c, k) {
-  return 1 / (1 + Math.exp(-k * (t - c)));
-}
-
-function lateRise(t, start = 0.55, power = 2.2) {
-  if (t <= start) return 0;
-  const x = (t - start) / (1 - start);
-  return Math.pow(clamp(x, 0, 1), power);
-}
+import { characteristics, clamp, equationLibrary, filterEffects, s } from "./model.js";
 
 /**
  * Heuristic extraction model notes:
@@ -40,9 +9,34 @@ function lateRise(t, start = 0.55, power = 2.2) {
  *   to create believable sensory outcomes.
  */
 export function runSimulation(processKey, params) {
-  const model = deriveModel(processKey, params);
-  const { method, c, grindFine, fines, tempFactor, pressureFactor, agitation, preinfusion, extractionSpeed, concentration, unevenness, extractionEff, roast, minerals, buffering, bodyBias, clarityBias } = model;
-  const filterCoeff = filterEffects[params.filterType] || filterEffects.paper;
+  const method = processPresets[processKey];
+  const c = method.coeff;
+
+  const grindFine = 1 - s(params.grindSize);
+  const fines = s(params.fines);
+  const tempFactor = clamp((params.temperature - 80) / 20, 0.2, 1.2);
+  const pressureFactor = clamp((params.pressure - 1) / 9, 0, 1.5);
+  const agitation = s(params.agitation);
+  const preinfusion = clamp(params.preinfusion / Math.max(params.contactTime, 1), 0, 0.6);
+
+  const extractionSpeed = equationLibrary.extractionSpeed.compute({
+    c,
+    grindFine,
+    fines,
+    agitation,
+    tempFactor,
+    pressureFactor,
+    preinfusion
+  });
+
+  const concentration = clamp((params.dose / params.brewRatio) / 2.2, 0.35, 3.2);
+  const unevenness = clamp((1 - s(params.bedUniformity)) * 0.55 + s(params.channelingRisk) * 0.75, 0, 1.35);
+  const extractionEff = clamp((params.extractionEfficiency - 40) / 55, 0, 1.1);
+  const roast = s(params.roastLevel);
+  const minerals = s(params.mineralStrength);
+  const buffering = s(params.acidityBuffering);
+  const bodyBias = s(params.bodyEmphasis);
+  const clarityBias = s(params.clarityEmphasis);
 
   const timeline = [];
   const points = 80;
@@ -51,36 +45,42 @@ export function runSimulation(processKey, params) {
     const t = i / points;
     const tt = clamp(t * extractionSpeed, 0, 1.2);
 
-    // Chemical families (extraction-side)
-    const organicAcids =
-      78 * sigmoid(tt, 0.14, 11) * (1 - 0.35 * lateRise(tt, 0.5, 1.6)) * (1 - 0.2 * buffering) * (1 + 0.14 * minerals);
-
-    const sugars =
-      74 * sigmoid(tt, 0.3, 8.5) * (1 - 0.28 * lateRise(tt, 0.72, 2.6)) * (1 + 0.2 * extractionEff) * (1 - 0.26 * unevenness);
-
-    const polyphenols =
-      12 * sigmoid(tt, 0.48, 6) +
-      62 * lateRise(tt, 0.62, 2.35) * (1 + 0.58 * fines + 0.42 * unevenness + 0.12 * concentration);
+    const organicAcids = equationLibrary.organicAcids.compute({ tt, buffering, minerals });
+    const sugars = equationLibrary.sugars.compute({ tt, extractionEff, unevenness });
+    const polyphenols = equationLibrary.polyphenols.compute({ tt, fines, unevenness, concentration });
 
     const maillard =
-      (22 + 62 * roast) * sigmoid(tt, 0.36, 7.5) * (1 + 0.1 * concentration) * (0.88 + 0.12 * extractionEff);
+      (22 + 62 * roast) *
+      (1 / (1 + Math.exp(-7.5 * (tt - 0.36)))) *
+      (1 + 0.1 * concentration) *
+      (0.88 + 0.12 * extractionEff);
 
     const melanoidins =
-      (12 + 58 * roast) * sigmoid(tt, 0.52, 6.4) * (1 + 0.34 * fines + 0.25 * concentration) * c.body;
+      (12 + 58 * roast) *
+      (1 / (1 + Math.exp(-6.4 * (tt - 0.52)))) *
+      (1 + 0.34 * fines + 0.25 * concentration) *
+      c.body;
 
     const lipids =
-      30 * sigmoid(tt, 0.34, 7) * (1 + 0.55 * fines + 0.34 * concentration + 0.25 * bodyBias) * (0.9 + 0.2 * c.body);
+      30 *
+      (1 / (1 + Math.exp(-7 * (tt - 0.34)))) *
+      (1 + 0.55 * fines + 0.34 * concentration + 0.25 * bodyBias) *
+      (0.9 + 0.2 * c.body);
 
     const aromatics =
-      58 * sigmoid(tt, 0.19, 10) * (1 - 0.2 * lateRise(tt, 0.76, 2.1)) * (1 + 0.16 * agitation + 0.12 * c.aroma);
+      58 *
+      (1 / (1 + Math.exp(-10 * (tt - 0.19)))) *
+      (1 - 0.2 * (tt <= 0.76 ? 0 : Math.pow(clamp((tt - 0.76) / (1 - 0.76), 0, 1), 2.1))) *
+      (1 + 0.16 * agitation + 0.12 * c.aroma);
 
-    // Flavor families (sensory-side), derived from chemical curves + process factors.
     const acidity = organicAcids * (0.82 + 0.16 * clarityBias) * (1 - 0.12 * roast);
     const sweetness = (0.62 * sugars + 0.3 * maillard) * (0.9 + 0.1 * extractionEff) * (1 - 0.12 * unevenness);
-    const bitterness = (0.62 * polyphenols + 0.28 * maillard + 0.2 * melanoidins) * (0.88 + 0.22 * roast);
-    const burnt = (0.44 * maillard + 0.46 * melanoidins + 28 * lateRise(tt, 0.7, 2.2)) * (0.75 + 0.35 * roast);
+    const bitterness = equationLibrary.flavorBitterness.compute({ polyphenols, maillard, melanoidins, roast });
+    const burnt = (0.44 * maillard + 0.46 * melanoidins + 28 * (tt <= 0.7 ? 0 : Math.pow(clamp((tt - 0.7) / (1 - 0.7), 0, 1), 2.2))) * (0.75 + 0.35 * roast);
     const body = (0.64 * lipids + 0.24 * melanoidins + 10 * concentration) * (0.86 + 0.2 * bodyBias);
-    const astringency = (0.76 * polyphenols + 16 * lateRise(tt, 0.66, 2.4)) * (0.86 + 0.24 * unevenness);
+    const astringency =
+      (0.76 * polyphenols + 16 * (tt <= 0.66 ? 0 : Math.pow(clamp((tt - 0.66) / (1 - 0.66), 0, 1), 2.4))) *
+      (0.86 + 0.24 * unevenness);
 
     timeline.push({
       t,
@@ -120,7 +120,12 @@ export function runSimulation(processKey, params) {
     bitterness: adjusted.bitterness,
     body: adjusted.body,
     aroma: adjusted.aromatics,
-    clarity: clamp(56 + 0.34 * adjusted.acidity - 0.28 * adjusted.body - 0.2 * adjusted.polyphenols + 18 * clarityBias),
+    clarity: equationLibrary.finalClarity.compute({
+      acidity: adjusted.acidity,
+      body: adjusted.body,
+      polyphenols: adjusted.polyphenols,
+      clarityBias
+    }),
     polyphenols: adjusted.polyphenols,
     roastiness: clamp(adjusted.burnt * 0.78 + adjusted.maillard * 0.24),
     floralFruit: clamp(adjusted.acidity * 0.74 + adjusted.aromatics * 0.22 - adjusted.burnt * 0.2),
@@ -218,5 +223,7 @@ function buildSummary(processKey, p, adjusted) {
   const primary = tags[0] || "balanced extraction";
   const secondary = tags[1] || "moderate intensity";
 
-  return `${name} profile currently emphasizes ${primary} with ${secondary}. Acidity ${Math.round(p.acidity)}, sweetness ${Math.round(p.sweetness)}, bitterness ${Math.round(p.bitterness)}, body ${Math.round(p.body)}, and polyphenols ${Math.round(p.polyphenols)}.`;
+  return `${name} profile currently emphasizes ${primary} with ${secondary}. Acidity ${Math.round(p.acidity)}, sweetness ${Math.round(
+    p.sweetness
+  )}, bitterness ${Math.round(p.bitterness)}, body ${Math.round(p.body)}, and polyphenols ${Math.round(p.polyphenols)}.`;
 }
