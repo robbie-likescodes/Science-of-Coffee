@@ -168,53 +168,6 @@ function initRadarOverlayInteractions() {
   });
 }
 
-function initRadarOverlayInteractions() {
-  if (!radarOverlay) return;
-  const title = radarOverlay.querySelector(".radar-overlay-title");
-  if (!title) return;
-
-  let dragging = false;
-  let startX = 0;
-  let startY = 0;
-  let baseLeft = 0;
-  let baseTop = 0;
-
-  const onMove = (event) => {
-    if (!dragging) return;
-    const nextLeft = Math.min(
-      Math.max(8, baseLeft + (event.clientX - startX)),
-      window.innerWidth - radarOverlay.offsetWidth - 8
-    );
-    const nextTop = Math.min(
-      Math.max(8, baseTop + (event.clientY - startY)),
-      window.innerHeight - radarOverlay.offsetHeight - 8
-    );
-    radarOverlay.style.left = `${nextLeft}px`;
-    radarOverlay.style.top = `${nextTop}px`;
-    radarOverlay.style.right = "auto";
-  };
-
-  const onUp = () => {
-    dragging = false;
-    title.classList.remove("dragging");
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
-  };
-
-  title.addEventListener("pointerdown", (event) => {
-    event.preventDefault();
-    dragging = true;
-    startX = event.clientX;
-    startY = event.clientY;
-    baseLeft = radarOverlay.offsetLeft;
-    baseTop = radarOverlay.offsetTop;
-    title.classList.add("dragging");
-    title.setPointerCapture(event.pointerId);
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
-  });
-}
-
 const sliderEquationMap = {
   dose: {
     title: "Concentration term",
@@ -403,19 +356,12 @@ function setProcess(processKey) {
 }
 
 if (missingCoreElements.length === 0) {
-  const root = document.documentElement;
-  const alreadyInitialized = root.dataset.coffeeSimInitialized === "1";
-
-  if (!alreadyInitialized) {
-    root.dataset.coffeeSimInitialized = "1";
-    initProcessSelector(processSelect, setProcess);
-    renderGraphControlState();
-    if (viewTabs && modelView) {
-      renderViewState();
-      if (modelToc && modelContent) renderModelDocumentation(modelToc, modelContent);
-    }
-    initRadarOverlayInteractions();
+  initProcessSelector(processSelect, setProcess);
+  renderGraphControlState();
+  if (viewTabs && modelView) {
+    renderViewState();
+    if (modelToc && modelContent) renderModelDocumentation(modelToc, modelContent);
   }
-
+  initRadarOverlayInteractions();
   setProcess(state.process);
 }
