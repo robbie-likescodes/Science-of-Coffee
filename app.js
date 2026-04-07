@@ -1,4 +1,4 @@
-import { brewMethodPresets } from "./presets.js";
+import { brewMethodPresets, clampValueForControl, controlConfig } from "./presets.js";
 import { getControlEquationMeta, getModelDerivatives, runSimulation } from "./simulation.js";
 import { GRAPH_MODES, X_AXIS_MODES, drawRadarChart, drawTimeChart, getDefaultVisibleCurves, getSeriesForMode } from "./charts.js";
 import {
@@ -17,6 +17,7 @@ import {
 const processSelect = document.getElementById("processSelect");
 const processDescription = document.getElementById("processDescription");
 const controlsContainer = document.getElementById("controlsContainer");
+const resetControlsButton = document.getElementById("resetControlsButton");
 const summaryText = document.getElementById("summaryText");
 const interpretationBox = document.getElementById("interpretationBox");
 const equationsContent = document.getElementById("equationsContent");
@@ -133,6 +134,39 @@ function initRadarOverlayInteractions() {
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp, { once: true });
   });
+}
+
+
+function clampParamsForProcess(processKey, params) {
+  const next = { ...params };
+  controlConfig.forEach(({ key }) => {
+    next[key] = clampValueForControl(processKey, key, next[key]);
+  });
+  return next;
+}
+
+function applyMethodDefaults(processKey, { showPopup = false } = {}) {
+  state.params = clampParamsForProcess(processKey, { ...brewMethodPresets[processKey].defaults });
+  renderControls(controlsContainer, state.params, processKey, (key, value, meta) => {
+    const before = { ...state.params };
+    state.params[key] = clampValueForControl(state.process, key, value);
+    emitEquationPopup(key, before, state.params, meta?.anchorEl);
+    rerender();
+  });
+
+  if (showPopup) {
+    popup.show({
+      anchorEl: resetControlsButton,
+      title: "Reset to brew method defaults",
+      equation: "params = brewMethodPresets[selectedMethod].defaults",
+      variable: brewMethodPresets[processKey].label,
+      before: "custom values",
+      after: "method defaults",
+      effect: "All controls are reset to standard defaults for the selected brew method and charts update immediately."
+    });
+  }
+
+  rerender();
 }
 
 const sliderEquationMap = {
@@ -317,17 +351,12 @@ function emitProcessPopup(processKey, previousProcessKey) {
 function setProcess(processKey) {
   const previousProcess = state.process;
   state.process = processKey;
-  state.params = { ...brewMethodPresets[processKey].defaults };
   renderMethodDescription(processDescription, processKey);
-  renderControls(controlsContainer, state.params, (key, value, meta) => {
-    const previousParams = { ...state.params };
-    state.params[key] = value;
-    emitEquationPopup(key, previousParams, state.params, meta?.anchorEl);
-    rerender();
-  });
+  applyMethodDefaults(processKey);
   emitProcessPopup(processKey, previousProcess);
-  rerender();
 }
+
+resetControlsButton?.addEventListener("click", () => applyMethodDefaults(state.process, { showPopup: true }));
 
 initProcessSelector(processSelect, setProcess);
 renderGraphControlState();

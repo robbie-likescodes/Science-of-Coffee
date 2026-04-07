@@ -1,4 +1,4 @@
-import { brewMethodPresets, controlConfig } from "./presets.js";
+import { brewMethodPresets, controlConfig, getControlSpec } from "./presets.js";
 import { equationLibrary, filterEffects, modelSections } from "./model.js";
 
 const numberFormat = (v) => (Number.isInteger(v) ? String(v) : Number(v).toFixed(1));
@@ -33,11 +33,12 @@ export function renderMethodDescription(descriptionEl, processKey) {
   descriptionEl.textContent = brewMethodPresets[processKey]?.description || "";
 }
 
-export function renderControls(container, state, onInput) {
+export function renderControls(container, state, processKey, onInput) {
   container.innerHTML = "";
 
   controlConfig.forEach((cfg) => {
-    const [key, label, minOrOpts, max, step] = cfg;
+    const { key, label } = cfg;
+    const spec = getControlSpec(processKey, key) || cfg;
     const wrapper = document.createElement("div");
     wrapper.className = "control";
     wrapper.dataset.controlKey = key;
@@ -53,10 +54,10 @@ export function renderControls(container, state, onInput) {
     head.append(title, value);
     wrapper.appendChild(head);
 
-    if (Array.isArray(minOrOpts)) {
+    if (spec.type === "select") {
       const select = document.createElement("select");
       select.value = state[key];
-      minOrOpts.forEach((optValue) => {
+      spec.options.forEach((optValue) => {
         const opt = document.createElement("option");
         opt.value = optValue;
         opt.textContent = optValue;
@@ -67,12 +68,12 @@ export function renderControls(container, state, onInput) {
     } else {
       const input = document.createElement("input");
       input.type = "range";
-      input.min = String(minOrOpts);
-      input.max = String(max);
-      input.step = String(step);
+      input.min = String(spec.min);
+      input.max = String(spec.max);
+      input.step = String(spec.step);
       input.value = state[key];
       input.addEventListener("input", () => {
-        const parsed = step < 1 ? parseFloat(input.value) : parseInt(input.value, 10);
+        const parsed = spec.step < 1 ? parseFloat(input.value) : parseInt(input.value, 10);
         value.textContent = numberFormat(parsed);
         onInput(key, parsed, { anchorEl: wrapper, inputType: "range" });
       });
