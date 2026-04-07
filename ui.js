@@ -157,6 +157,26 @@ function makeTag(text) {
   return tag;
 }
 
+function createMathBlock(tex, fallbackText) {
+  const wrap = document.createElement("div");
+  wrap.className = "eq-math";
+  wrap.innerHTML = `\\[${tex}\\]`;
+  wrap.dataset.fallback = fallbackText || tex;
+  return wrap;
+}
+
+function scheduleMathTypeset(scopeEl) {
+  if (window.MathJax?.typesetPromise) {
+    window.MathJax.typesetPromise([scopeEl]).catch(() => {});
+    return;
+  }
+  scopeEl.querySelectorAll(".eq-math").forEach((el) => {
+    if (!el.dataset.fallback) return;
+    el.textContent = el.dataset.fallback;
+    el.classList.add("eq-math-fallback");
+  });
+}
+
 function renderEquationCard(eqId) {
   const eq = equationLibrary[eqId];
   if (!eq) return null;
@@ -171,9 +191,7 @@ function renderEquationCard(eqId) {
   const type = makeTag(eq.type);
   header.append(h4, type);
 
-  const formula = document.createElement("pre");
-  formula.className = "eq-formula";
-  formula.textContent = eq.formula;
+  const formula = createMathBlock(eq.math || eq.formula, eq.formula);
 
   const explain = document.createElement("p");
   explain.textContent = eq.relevance;
@@ -182,7 +200,7 @@ function renderEquationCard(eqId) {
   vars.className = "eq-vars";
   Object.entries(eq.variables || {}).forEach(([k, v]) => {
     const li = document.createElement("li");
-    li.innerHTML = `<strong>${k}</strong>: ${v}`;
+    li.innerHTML = `<strong title="${v}">${k}</strong>: ${v}`;
     vars.appendChild(li);
   });
 
@@ -191,6 +209,7 @@ function renderEquationCard(eqId) {
   eq.affectedGraphs.forEach((g) => impacts.appendChild(makeTag(`Used in ${g} graph`)));
 
   card.append(header, formula, explain, vars, impacts);
+  scheduleMathTypeset(card);
   return card;
 }
 
@@ -262,6 +281,8 @@ export function renderModelDocumentation(tocEl, contentEl) {
 
     contentEl.appendChild(secEl);
   });
+
+  scheduleMathTypeset(contentEl);
 }
 
 export function renderSummary(summaryEl, interpretationEl, statsEl, text, profile, interpretation) {
@@ -284,11 +305,115 @@ export function renderSummary(summaryEl, interpretationEl, statsEl, text, profil
 }
 
 export function renderEquations(container, equations) {
-  container.innerHTML = `
-    <p class="subtitle">These equations are intentionally heuristic teaching relationships, not precision chemistry.</p>
-    <h3>Core timing model</h3>
-    <ul>${equations.core.map((line) => `<li>${line}</li>`).join("")}</ul>
-    <h3>Extraction families</h3>
-    <ul>${equations.families.map((line) => `<li>${line}</li>`).join("")}</ul>
-  `;
+  const sections = [
+    {
+      title: "Core timing model",
+      entries: [
+        {
+          name: "Extraction Speed",
+          tex: "E = c_{\\mathrm{speed}}\\cdot\\Bigl(0.5 + 0.46g + 0.2f + 0.28a + 0.38\\tau + 0.24p + 0.1\\rho + 0.18r_{s} - 0.12m_{f}\\Bigr)",
+          explain: "g = grind fineness, f = fines, a = agitation effect, τ = temperature-rate multiplier, p = useful pressure, ρ = preinfusion ratio."
+        },
+        {
+          name: "Effective Progress",
+          tex: "t_{\\mathrm{eff}} = t\\cdot E\\cdot k_{t}",
+          explain: "kₜ is contact-time scaling; progress advances faster when extraction speed and contact-time factor are high."
+        },
+        {
+          name: "Clamped Timeline Variable",
+          tex: "t_t = \\operatorname{clamp}\\!\\left(t_{\\mathrm{eff}}, 0, 1.25\\right)",
+          explain: "The family equations all evaluate on tₜ so early and late extraction phases remain bounded."
+        }
+      ]
+    },
+    {
+      title: "Extraction families",
+      entries: [
+        {
+          name: "Organic Acids",
+          tex: "A_{\\mathrm{org}} = 76\\,\\sigma(t_t;0.13,11)\\,\\Bigl(1-0.36L(t_t;0.54,1.55)\\Bigr)\\,(1-0.22b)\\,(1+0.12m)\\,(1-0.1r)\\,(1+0.16\\Delta_a)",
+          explain: "Early-stage acidity family with buffering/mineral/roast/temperature terms."
+        },
+        {
+          name: "Sugars",
+          tex: "S = 72\\,\\sigma(t_t;0.31,8.2)\\,\\Bigl(1-0.26L(t_t;0.76,2.5)\\Bigr)\\,(1+0.22\\eta+0.08\\Delta_s)\\,(1-0.25u)\\,(0.92+0.1r)",
+          explain: "Mid-phase sweetness family including efficiency η and unevenness u."
+        },
+        {
+          name: "Polyphenols",
+          tex: "P = 10\\,\\sigma(t_t;0.5,6.2) + 68\\,L(t_t;0.6,2.25)\\,\\Bigl(1+0.52f+0.42u+0.12c+0.2\\lambda+0.24h\\Bigr)",
+          explain: "Late-phase harshness family where fines, unevenness, concentration, and pressure harshness h are amplified."
+        }
+      ]
+    },
+    {
+      title: "Flavor mapping",
+      entries: [
+        {
+          name: "Bitterness Mapping",
+          tex: "B = (0.58P + 0.24M_a + 0.22M_e)\\,(0.84 + 0.3r)\\,(0.92 + 0.08c + 0.12h)",
+          explain: "Maps chemistry (polyphenols + Maillard/melanoidins) to perceived bitterness."
+        },
+        {
+          name: "Final Clarity",
+          tex: "C_{\\mathrm{final}} = \\operatorname{clamp}\\!\\left(54 + 0.34A - 0.3B_d - 0.2P + 18\\kappa + 0.6\\phi\\right)",
+          explain: "A = acidity, B_d = body, κ = clarity emphasis, φ = filter clarity coefficient."
+        }
+      ]
+    },
+    {
+      title: "Filter adjustments",
+      entries: [
+        {
+          name: "Post-curve Adjustment",
+          tex: "\\begin{aligned}B_d' &= B_d + f_{\\mathrm{body}}\\\\
+P' &= P + f_{\\mathrm{poly}}\\\\
+A_r' &= A_r + f_{\\mathrm{aroma}}\\\\
+C' &= C + 0.6\\,f_{\\mathrm{clarity}}\\end{aligned}",
+          explain: "Paper/cloth/metal filters apply fixed coefficients after timeline curves are computed."
+        }
+      ]
+    }
+  ];
+
+  container.innerHTML = "";
+  const intro = document.createElement("p");
+  intro.className = "subtitle";
+  intro.textContent = "These equations are heuristic teaching relationships (designed to match the simulation logic).";
+  container.appendChild(intro);
+
+  sections.forEach((section) => {
+    const group = document.createElement("section");
+    group.className = "equation-group";
+
+    const title = document.createElement("h3");
+    title.textContent = section.title;
+    group.appendChild(title);
+
+    section.entries.forEach((entry) => {
+      const card = document.createElement("article");
+      card.className = "eq-card";
+
+      const name = document.createElement("h4");
+      name.textContent = entry.name;
+
+      const math = createMathBlock(entry.tex, entry.tex);
+
+      const where = document.createElement("p");
+      where.className = "eq-note";
+      where.textContent = `Where: ${entry.explain}`;
+
+      card.append(name, math, where);
+      group.appendChild(card);
+    });
+
+    container.appendChild(group);
+  });
+
+  const legend = document.createElement("div");
+  legend.className = "eq-legend";
+  legend.innerHTML = "<strong>Legend:</strong> σ(t; a, b) = sigmoid, L(t; s, p) = late-rise term, clamp(·) = bounded normalization.";
+  container.appendChild(legend);
+
+  scheduleMathTypeset(container);
 }
