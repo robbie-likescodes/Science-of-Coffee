@@ -4,6 +4,10 @@ import { equationLibrary, filterEffects, modelSections } from "./model.js";
 const numberFormat = (v) => (Number.isInteger(v) ? String(v) : Number(v).toFixed(1));
 
 export function initProcessSelector(selectEl, onChange) {
+  if (!selectEl) {
+    console.error("[coffee-sim] Missing #processSelect element.");
+    return;
+  }
   Object.entries(brewMethodPresets).forEach(([key, value]) => {
     const opt = document.createElement("option");
     opt.value = key;

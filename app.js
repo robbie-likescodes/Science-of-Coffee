@@ -35,6 +35,35 @@ const modelToc = document.getElementById("modelToc");
 const modelContent = document.getElementById("modelContent");
 const processPickerWrap = document.getElementById("processPickerWrap");
 
+const requiredElements = {
+  processSelect,
+  processDescription,
+  controlsContainer,
+  summaryText,
+  interpretationBox,
+  equationsContent,
+  statsEl,
+  timeChart,
+  radarChart,
+  graphModeControls,
+  axisModeControls,
+  curveControls,
+  viewTabs,
+  simulatorView,
+  modelView,
+  modelToc,
+  modelContent,
+  processPickerWrap
+};
+
+const missingElements = Object.entries(requiredElements)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missingElements.length) {
+  console.error("[coffee-sim] Missing required DOM elements:", missingElements.join(", "));
+}
+
 const state = {
   process: "espresso",
   view: "simulator",
@@ -124,6 +153,7 @@ function initRadarOverlayInteractions() {
   };
 
   title.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
     dragging = true;
     startX = event.clientX;
     startY = event.clientY;
@@ -134,39 +164,6 @@ function initRadarOverlayInteractions() {
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp, { once: true });
   });
-}
-
-
-function clampParamsForProcess(processKey, params) {
-  const next = { ...params };
-  controlConfig.forEach(({ key }) => {
-    next[key] = clampValueForControl(processKey, key, next[key]);
-  });
-  return next;
-}
-
-function applyMethodDefaults(processKey, { showPopup = false } = {}) {
-  state.params = clampParamsForProcess(processKey, { ...brewMethodPresets[processKey].defaults });
-  renderControls(controlsContainer, state.params, processKey, (key, value, meta) => {
-    const before = { ...state.params };
-    state.params[key] = clampValueForControl(state.process, key, value);
-    emitEquationPopup(key, before, state.params, meta?.anchorEl);
-    rerender();
-  });
-
-  if (showPopup) {
-    popup.show({
-      anchorEl: resetControlsButton,
-      title: "Reset to brew method defaults",
-      equation: "params = brewMethodPresets[selectedMethod].defaults",
-      variable: brewMethodPresets[processKey].label,
-      before: "custom values",
-      after: "method defaults",
-      effect: "All controls are reset to standard defaults for the selected brew method and charts update immediately."
-    });
-  }
-
-  rerender();
 }
 
 const sliderEquationMap = {
@@ -356,11 +353,12 @@ function setProcess(processKey) {
   emitProcessPopup(processKey, previousProcess);
 }
 
-resetControlsButton?.addEventListener("click", () => applyMethodDefaults(state.process, { showPopup: true }));
-
-initProcessSelector(processSelect, setProcess);
-renderGraphControlState();
-renderViewState();
-renderModelDocumentation(modelToc, modelContent);
-initRadarOverlayInteractions();
-setProcess(state.process);
+if (!window.__coffeeSimInitialized && missingElements.length === 0) {
+  window.__coffeeSimInitialized = true;
+  initProcessSelector(processSelect, setProcess);
+  renderGraphControlState();
+  renderViewState();
+  renderModelDocumentation(modelToc, modelContent);
+  initRadarOverlayInteractions();
+  setProcess(state.process);
+}
