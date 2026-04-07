@@ -1,4 +1,4 @@
-import { brewMethodPresets } from "./presets.js";
+import { brewMethodPresets, clampValueForControl, controlConfig } from "./presets.js";
 import { getControlEquationMeta, getModelDerivatives, runSimulation } from "./simulation.js";
 import { GRAPH_MODES, X_AXIS_MODES, drawRadarChart, drawTimeChart, getDefaultVisibleCurves, getSeriesForMode } from "./charts.js";
 import {
@@ -17,6 +17,7 @@ import {
 const processSelect = document.getElementById("processSelect");
 const processDescription = document.getElementById("processDescription");
 const controlsContainer = document.getElementById("controlsContainer");
+const resetControlsButton = document.getElementById("resetControlsButton");
 const summaryText = document.getElementById("summaryText");
 const interpretationBox = document.getElementById("interpretationBox");
 const equationsContent = document.getElementById("equationsContent");
@@ -349,16 +350,9 @@ function emitProcessPopup(processKey, previousProcessKey) {
 function setProcess(processKey) {
   const previousProcess = state.process;
   state.process = processKey;
-  state.params = { ...brewMethodPresets[processKey].defaults };
   renderMethodDescription(processDescription, processKey);
-  renderControls(controlsContainer, state.params, (key, value, meta) => {
-    const previousParams = { ...state.params };
-    state.params[key] = value;
-    emitEquationPopup(key, previousParams, state.params, meta?.anchorEl);
-    rerender();
-  });
+  applyMethodDefaults(processKey);
   emitProcessPopup(processKey, previousProcess);
-  rerender();
 }
 
 if (missingCoreElements.length === 0) {

@@ -1,3 +1,42 @@
+const commonControlConfig = {
+  dose: { label: "Dose (g)", type: "range", min: 8, max: 90, step: 1 },
+  brewRatio: { label: "Brew Ratio (water:coffee)", type: "range", min: 1.5, max: 20, step: 0.1 },
+  grindSize: { label: "Grind Size", type: "range", min: 0, max: 100, step: 1 },
+  fines: { label: "Fines Amount", type: "range", min: 0, max: 100, step: 1 },
+  roastLevel: { label: "Roast Level", type: "range", min: 0, max: 100, step: 1 },
+  temperature: { label: "Water Temperature (°F)", type: "range", min: 20, max: 100, step: 1 },
+  contactTime: { label: "Contact Time (s)", type: "range", min: 20, max: 1200, step: 5 },
+  pressure: { label: "Pressure (bar)", type: "range", min: 1, max: 12, step: 0.1 },
+  pressureAggressiveness: { label: "Pressure Profile Aggressiveness", type: "range", min: 0, max: 100, step: 1 },
+  preinfusion: { label: "Preinfusion Time (s)", type: "range", min: 0, max: 60, step: 1 },
+  agitation: { label: "Agitation", type: "range", min: 0, max: 100, step: 1 },
+  filterType: { label: "Filter Type", type: "select", options: ["paper", "cloth", "metal"] },
+  bedUniformity: { label: "Bed Uniformity", type: "range", min: 0, max: 100, step: 1 },
+  channelingRisk: { label: "Channeling Risk", type: "range", min: 0, max: 100, step: 1 },
+  extractionEfficiency: { label: "Extraction Efficiency", type: "range", min: 40, max: 95, step: 1 },
+  mineralStrength: { label: "Water Mineral Strength", type: "range", min: 0, max: 100, step: 1 },
+  acidityBuffering: { label: "Acidity Buffering", type: "range", min: 0, max: 100, step: 1 },
+  bodyEmphasis: { label: "Body Emphasis", type: "range", min: 0, max: 100, step: 1 },
+  clarityEmphasis: { label: "Clarity Emphasis", type: "range", min: 0, max: 100, step: 1 }
+};
+
+const buildMethodRanges = (overrides = {}) => {
+  const merged = {};
+  Object.entries(commonControlConfig).forEach(([key, cfg]) => {
+    if (cfg.type === "select") {
+      merged[key] = { options: [...cfg.options] };
+    } else {
+      merged[key] = { min: cfg.min, max: cfg.max, step: cfg.step };
+    }
+  });
+
+  Object.entries(overrides).forEach(([key, value]) => {
+    merged[key] = { ...merged[key], ...value };
+  });
+
+  return merged;
+};
+
 export const brewMethodPresets = {
   espresso: {
     label: "Espresso",
@@ -23,6 +62,18 @@ export const brewMethodPresets = {
       bodyEmphasis: 70,
       clarityEmphasis: 45
     },
+    ranges: buildMethodRanges({
+      dose: { min: 14, max: 24, step: 0.5 },
+      brewRatio: { min: 1.6, max: 3.2, step: 0.1 },
+      grindSize: { min: 5, max: 35, step: 1 },
+      contactTime: { min: 18, max: 50, step: 1 },
+      pressure: { min: 6, max: 11, step: 0.1 },
+      pressureAggressiveness: { min: 20, max: 100, step: 1 },
+      preinfusion: { min: 0, max: 15, step: 1 },
+      agitation: { min: 0, max: 45, step: 1 },
+      filterType: { options: ["paper", "metal"] },
+      temperature: { min: 88, max: 98, step: 1 }
+    }),
     coeff: { speed: 1.32, clarity: 0.52, body: 1.22, bitterness: 1.15, aroma: 1.0, immersion: 0.08, windowWidth: 0.32 }
   },
   pourOver: {
@@ -49,6 +100,18 @@ export const brewMethodPresets = {
       bodyEmphasis: 42,
       clarityEmphasis: 82
     },
+    ranges: buildMethodRanges({
+      dose: { min: 12, max: 36, step: 1 },
+      brewRatio: { min: 12, max: 18, step: 0.1 },
+      grindSize: { min: 45, max: 85, step: 1 },
+      contactTime: { min: 120, max: 420, step: 5 },
+      pressure: { min: 1, max: 2.2, step: 0.1 },
+      pressureAggressiveness: { min: 0, max: 30, step: 1 },
+      preinfusion: { min: 15, max: 75, step: 1 },
+      agitation: { min: 15, max: 80, step: 1 },
+      filterType: { options: ["paper", "cloth"] },
+      temperature: { min: 88, max: 98, step: 1 }
+    }),
     coeff: { speed: 0.82, clarity: 1.28, body: 0.74, bitterness: 0.92, aroma: 1.06, immersion: 0.22, windowWidth: 0.58 }
   },
   frenchPress: {
@@ -75,6 +138,18 @@ export const brewMethodPresets = {
       bodyEmphasis: 82,
       clarityEmphasis: 34
     },
+    ranges: buildMethodRanges({
+      dose: { min: 20, max: 60, step: 1 },
+      brewRatio: { min: 10, max: 18, step: 0.1 },
+      grindSize: { min: 65, max: 95, step: 1 },
+      contactTime: { min: 180, max: 600, step: 5 },
+      pressure: { min: 1, max: 1.6, step: 0.1 },
+      pressureAggressiveness: { min: 0, max: 10, step: 1 },
+      preinfusion: { min: 0, max: 20, step: 1 },
+      agitation: { min: 20, max: 85, step: 1 },
+      filterType: { options: ["metal"] },
+      temperature: { min: 88, max: 98, step: 1 }
+    }),
     coeff: { speed: 0.75, clarity: 0.68, body: 1.38, bitterness: 1.03, aroma: 0.96, immersion: 0.95, windowWidth: 0.62 }
   },
   siphon: {
@@ -101,6 +176,18 @@ export const brewMethodPresets = {
       bodyEmphasis: 50,
       clarityEmphasis: 69
     },
+    ranges: buildMethodRanges({
+      dose: { min: 14, max: 36, step: 1 },
+      brewRatio: { min: 10, max: 16, step: 0.1 },
+      grindSize: { min: 45, max: 75, step: 1 },
+      contactTime: { min: 70, max: 210, step: 5 },
+      pressure: { min: 1, max: 2.5, step: 0.1 },
+      pressureAggressiveness: { min: 5, max: 40, step: 1 },
+      preinfusion: { min: 5, max: 25, step: 1 },
+      agitation: { min: 15, max: 60, step: 1 },
+      filterType: { options: ["cloth", "paper"] },
+      temperature: { min: 88, max: 97, step: 1 }
+    }),
     coeff: { speed: 0.95, clarity: 1.08, body: 0.92, bitterness: 0.96, aroma: 1.2, immersion: 0.45, windowWidth: 0.48 }
   },
   aeroPress: {
@@ -127,6 +214,18 @@ export const brewMethodPresets = {
       bodyEmphasis: 58,
       clarityEmphasis: 62
     },
+    ranges: buildMethodRanges({
+      dose: { min: 11, max: 24, step: 0.5 },
+      brewRatio: { min: 8, max: 17, step: 0.1 },
+      grindSize: { min: 30, max: 75, step: 1 },
+      contactTime: { min: 45, max: 210, step: 5 },
+      pressure: { min: 1, max: 3.5, step: 0.1 },
+      pressureAggressiveness: { min: 5, max: 75, step: 1 },
+      preinfusion: { min: 0, max: 30, step: 1 },
+      agitation: { min: 15, max: 90, step: 1 },
+      filterType: { options: ["paper", "metal"] },
+      temperature: { min: 80, max: 96, step: 1 }
+    }),
     coeff: { speed: 1.02, clarity: 0.98, body: 1.0, bitterness: 0.98, aroma: 1.03, immersion: 0.52, windowWidth: 0.44 }
   },
   coldBrew: {
@@ -153,30 +252,67 @@ export const brewMethodPresets = {
       bodyEmphasis: 76,
       clarityEmphasis: 40
     },
+    ranges: buildMethodRanges({
+      dose: { min: 40, max: 120, step: 1 },
+      brewRatio: { min: 6, max: 14, step: 0.1 },
+      grindSize: { min: 65, max: 95, step: 1 },
+      contactTime: { min: 360, max: 1440, step: 15 },
+      pressure: { min: 1, max: 1.2, step: 0.1 },
+      pressureAggressiveness: { min: 0, max: 5, step: 1 },
+      preinfusion: { min: 0, max: 30, step: 1 },
+      agitation: { min: 0, max: 35, step: 1 },
+      filterType: { options: ["metal", "cloth", "paper"] },
+      temperature: { min: 4, max: 30, step: 1 }
+    }),
     coeff: { speed: 0.36, clarity: 0.82, body: 1.12, bitterness: 0.7, aroma: 0.74, immersion: 1.05, windowWidth: 0.74 }
   }
 };
 
 export const processPresets = brewMethodPresets;
 
-export const controlConfig = [
-  ["dose", "Dose (g)", 8, 90, 1],
-  ["brewRatio", "Brew Ratio (water:coffee)", 1.5, 20, 0.1],
-  ["grindSize", "Grind Size", 0, 100, 1],
-  ["fines", "Fines Amount", 0, 100, 1],
-  ["roastLevel", "Roast Level", 0, 100, 1],
-  ["temperature", "Water Temperature (°C)", 20, 100, 1],
-  ["contactTime", "Contact Time (s)", 20, 1200, 5],
-  ["pressure", "Pressure (bar)", 1, 12, 0.1],
-  ["pressureAggressiveness", "Pressure Profile Aggressiveness", 0, 100, 1],
-  ["preinfusion", "Preinfusion Time (s)", 0, 60, 1],
-  ["agitation", "Agitation", 0, 100, 1],
-  ["filterType", "Filter Type", ["paper", "cloth", "metal"]],
-  ["bedUniformity", "Bed Uniformity", 0, 100, 1],
-  ["channelingRisk", "Channeling Risk", 0, 100, 1],
-  ["extractionEfficiency", "Extraction Efficiency", 40, 95, 1],
-  ["mineralStrength", "Water Mineral Strength", 0, 100, 1],
-  ["acidityBuffering", "Acidity Buffering", 0, 100, 1],
-  ["bodyEmphasis", "Body Emphasis", 0, 100, 1],
-  ["clarityEmphasis", "Clarity Emphasis", 0, 100, 1]
-];
+export const controlConfig = Object.entries(commonControlConfig).map(([key, config]) => ({
+  key,
+  ...config
+}));
+
+export function getControlDefinition(key) {
+  return commonControlConfig[key];
+}
+
+export function getControlSpec(processKey, key) {
+  const methodPreset = brewMethodPresets[processKey];
+  const base = commonControlConfig[key];
+  const override = methodPreset?.ranges?.[key];
+
+  if (!base) return null;
+
+  if (base.type === "select") {
+    return {
+      ...base,
+      options: override?.options ? [...override.options] : [...base.options]
+    };
+  }
+
+  return {
+    ...base,
+    min: override?.min ?? base.min,
+    max: override?.max ?? base.max,
+    step: override?.step ?? base.step
+  };
+}
+
+export function clampValueForControl(processKey, key, value) {
+  const spec = getControlSpec(processKey, key);
+  if (!spec) return value;
+
+  if (spec.type === "select") {
+    return spec.options.includes(value) ? value : spec.options[0];
+  }
+
+  const numericValue = Number(value);
+  const clamped = Math.max(spec.min, Math.min(spec.max, Number.isFinite(numericValue) ? numericValue : spec.min));
+
+  if (!spec.step || spec.step <= 0) return clamped;
+  const snapped = Math.round((clamped - spec.min) / spec.step) * spec.step + spec.min;
+  return Number(snapped.toFixed(spec.step < 1 ? 2 : 0));
+}
