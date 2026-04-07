@@ -42,55 +42,7 @@ const state = {
   params: { ...brewMethodPresets.espresso.defaults }
 };
 
-function syncRadarCanvasSize() {
-  const cssSize = Math.max(180, Math.floor(radarChart.clientWidth));
-  if (radarChart.width !== cssSize || radarChart.height !== cssSize) {
-    radarChart.width = cssSize;
-    radarChart.height = cssSize;
-  }
-}
-
-function initRadarOverlayInteractions() {
-  const dragHandle = radarOverlay.querySelector(".radar-overlay-title");
-  let dragging = false;
-  let pointerOffsetX = 0;
-  let pointerOffsetY = 0;
-
-  dragHandle.addEventListener("pointerdown", (event) => {
-    dragging = true;
-    const bounds = radarOverlay.getBoundingClientRect();
-    pointerOffsetX = event.clientX - bounds.left;
-    pointerOffsetY = event.clientY - bounds.top;
-    radarOverlay.style.left = `${bounds.left}px`;
-    radarOverlay.style.top = `${bounds.top}px`;
-    radarOverlay.style.right = "auto";
-    dragHandle.setPointerCapture(event.pointerId);
-  });
-
-  dragHandle.addEventListener("pointermove", (event) => {
-    if (!dragging) return;
-    const maxLeft = window.innerWidth - radarOverlay.offsetWidth;
-    const maxTop = window.innerHeight - radarOverlay.offsetHeight;
-    const nextLeft = Math.min(Math.max(0, event.clientX - pointerOffsetX), Math.max(0, maxLeft));
-    const nextTop = Math.min(Math.max(0, event.clientY - pointerOffsetY), Math.max(0, maxTop));
-    radarOverlay.style.left = `${nextLeft}px`;
-    radarOverlay.style.top = `${nextTop}px`;
-  });
-
-  const stopDragging = () => {
-    dragging = false;
-  };
-
-  dragHandle.addEventListener("pointerup", stopDragging);
-  dragHandle.addEventListener("pointercancel", stopDragging);
-
-  if (typeof ResizeObserver !== "undefined") {
-    const observer = new ResizeObserver(() => rerender());
-    observer.observe(radarOverlay);
-  } else {
-    window.addEventListener("resize", rerender);
-  }
-}
+const popup = createEquationPopupManager();
 
 function renderGraphControlState() {
   initModeControls(axisModeControls, X_AXIS_MODES, state.xMode, (nextMode) => {
@@ -136,6 +88,143 @@ function rerender() {
   renderEquations(equationsContent, result.equations);
 }
 
+const sliderEquationMap = {
+  dose: {
+    title: "Concentration term",
+    equation: "concentration = clamp((dose / brewRatio) / 2.2, 0.35, 3.2)",
+    variable: "concentration",
+    read: (d) => d.concentrationFactor,
+    effect: "Higher dose increases concentration, lifting body and intensity while amplifying late bitterness/astringency potential."
+  },
+  brewRatio: {
+    title: "Concentration term",
+    equation: "concentration = clamp((dose / brewRatio) / 2.2, 0.35, 3.2)",
+    variable: "concentration",
+    read: (d) => d.concentrationFactor,
+    effect: "Higher brew ratio lowers concentration, usually reducing heavy body and harsh late extraction."
+  },
+  grindSize: {
+    title: "Grind-flow coupling",
+    equation: "grindFine = 1 - s(grindSize); extractionSpeed includes +0.46×grindFine, while high grindFine also raises flowResistance in pressure coupling",
+    variable: "grindFine",
+    read: (d) => d.grindFineFactor,
+    effect: "Finer grind speeds extraction but increases resistance, making pressure shots more sensitive to harshness and channeling risk."
+  },
+  temperature: {
+    title: "Temperature kinetics",
+    equation: "tempRate = clamp(exp(0.028×(T-93)),0.16,1.65); extractionSpeed includes +0.38×tempRate and polyphenols include +0.20×tempLateRisk",
+    variable: "tempRate",
+    read: (d) => d.tempFactor,
+    effect: "Higher temperature accelerates extraction and can improve sweetness until late-stage bitterness/astringency ramps faster."
+  },
+  pressure: {
+    title: "Method-weighted pressure",
+    equation: "pressureUseful = pressureFactor×methodPressure×clamp(1.18 - 0.5×flowResistance,0.35,1.1)",
+    variable: "pressureUseful",
+    read: (d) => d.pressureUseful,
+    effect: "Pressure strongly affects espresso-like methods, but has limited effect in immersion brews; too much useful pressure can increase harshness."
+  },
+  fines: {
+    title: "Fines vs harshness",
+    equation: "polyphenols late term includes (1 + 0.52×fines + ...); finesMigrationRisk also penalizes extractionSpeed and raises astringency",
+    variable: "fines",
+    read: (d) => d.finesFactor,
+    effect: "More fines increase extraction intensity and body but also raise clogging/migration risk and late bitterness/astringency."
+  },
+  roastLevel: {
+    title: "Roast solubility and flavor",
+    equation: "roastSolubility = 0.86 + 0.34×roast; bitterness scales with (0.84 + 0.30×roast)",
+    variable: "roast",
+    read: (d) => d.roastFactor,
+    effect: "Darker roasts extract faster and skew flavor toward roastiness/bitterness with reduced sharp acidity."
+  },
+  contactTime: {
+    title: "Contact-time progression",
+    equation: "contactFactor = clamp(0.72 + 0.62×sqrt(contactTime / methodDefaultTime), 0.35, 1.8)",
+    variable: "contactFactor",
+    read: (d) => d.contactFactor,
+    effect: "Longer contact time advances extraction into later phases (from acids to sweetness to bitterness/astringency), not just uniform scaling."
+  },
+  agitation: {
+    title: "Method-aware agitation",
+    equation: "agitationEffect = agitation × (0.42 + 0.72×methodAgitationRelevance)",
+    variable: "agitationEffect",
+    read: (d) => d.agitationFactor,
+    effect: "Agitation has stronger effect in immersion/pour-over, weaker in compact espresso pucks; excessive agitation raises fines migration risk."
+  },
+  pressureAggressiveness: {
+    title: "Pressure profile harshness",
+    equation: "pressureHarshness increases with max(pressureUseful-0.68,0) and pressureAggressiveness under high flow resistance",
+    variable: "pressureHarshness",
+    read: (d) => d.pressureHarshness,
+    effect: "Aggressive pressure profiles can increase channeling/harshness risk when grind and puck resistance are mismatched."
+  },
+  preinfusion: {
+    title: "Preinfusion ratio",
+    equation: "preinfusionRatio = clamp(preinfusion / max(contactTime,1), 0, 0.65); extractionSpeed includes +0.10×preinfusionRatio",
+    variable: "preinfusionRatio",
+    read: (d) => d.preinfusionFactor,
+    effect: "More preinfusion can improve early wetting and extraction consistency, especially in percolation methods."
+  },
+  filterType: {
+    title: "Filter output adjustment",
+    equation: "finalAdjustments: body += fe.body, polyphenols += fe.polyphenols, aroma += fe.aroma, clarity gets +0.6×fe.clarity",
+    variable: "filterEffect",
+    read: (d) => d.filterEffect,
+    format: (v) => `body ${v.body}, clarity ${v.clarity}, polyphenols ${v.polyphenols}, aroma ${v.aroma}, lipids ${v.lipids}`,
+    effect: "Paper generally increases clarity and lowers oils/solids; metal raises body and suspended polyphenols."
+  },
+  bedUniformity: {
+    title: "Unevenness mix",
+    equation: "unevenness = clamp((1 - s(bedUniformity))×0.5 + s(channelingRisk)×0.78, 0, 1.5)",
+    variable: "unevenness",
+    read: (d) => d.unevennessFactor,
+    effect: "Better bed uniformity lowers unevenness and reduces late harshness."
+  },
+  channelingRisk: {
+    title: "Unevenness mix",
+    equation: "unevenness = clamp((1 - s(bedUniformity))×0.5 + s(channelingRisk)×0.78, 0, 1.5)",
+    variable: "unevenness",
+    read: (d) => d.unevennessFactor,
+    effect: "Higher channeling risk worsens extraction imbalance and bitterness/astringency amplification."
+  },
+  extractionEfficiency: {
+    title: "Extraction efficiency scaling",
+    equation: "extractionEff = clamp((extractionEfficiency - 40)/55, 0, 1.1); sugars include +0.22×extractionEff",
+    variable: "extractionEff",
+    read: (d) => d.extractionEffFactor,
+    effect: "Higher extraction efficiency helps sweetness until late-stage compounds begin dominating."
+  },
+  mineralStrength: {
+    title: "Water mineral scaling",
+    equation: "organicAcids × (1 + 0.12×minerals), acidity × (0.94 + 0.10×minerals)",
+    variable: "minerals",
+    read: (d) => d.mineralFactor,
+    effect: "Moderate mineral strength can improve extraction and perceived structure."
+  },
+  acidityBuffering: {
+    title: "Acid buffering term",
+    equation: "organicAcids × (1 - 0.22×buffering)",
+    variable: "buffering",
+    read: (d) => d.bufferingFactor,
+    effect: "Higher buffering suppresses sharp acidity expression."
+  },
+  bodyEmphasis: {
+    title: "Body bias term",
+    equation: "body × (0.84 + 0.24×bodyBias)",
+    variable: "bodyBias",
+    read: (d) => d.bodyBiasFactor,
+    effect: "Higher body emphasis boosts heavier tactile profile outcomes."
+  },
+  clarityEmphasis: {
+    title: "Clarity bias term",
+    equation: "final clarity includes +18×clarityBias",
+    variable: "clarityBias",
+    read: (d) => d.clarityBiasFactor,
+    effect: "Higher clarity emphasis favors cleaner, brighter profile mapping."
+  }
+};
+
 function formatValue(value) {
   return typeof value === "number" ? value.toFixed(3) : String(value);
 }
@@ -164,17 +253,17 @@ function emitEquationPopup(key, previousParams, nextParams, anchorEl) {
 }
 
 function emitProcessPopup(processKey, previousProcessKey) {
-  if (!processPicker || !previousProcessKey || previousProcessKey === processKey) return;
+  if (!processSelect || !previousProcessKey || previousProcessKey === processKey) return;
   const prevCoeff = brewMethodPresets[previousProcessKey].coeff;
   const nextCoeff = brewMethodPresets[processKey].coeff;
   popup.show({
-    anchorEl: processPicker,
+    anchorEl: processSelect,
     title: "Brew method baseline coefficients",
-    equation: "coeff = { speed, clarity, body, bitterness, aroma, immersion, windowWidth }",
-    variable: "method.coeff",
-    before: JSON.stringify(prevCoeff),
-    after: JSON.stringify(nextCoeff),
-    effect: "Each brew method gets a distinct baseline timeline shape, body/clarity balance, and sweet-window width."
+    equation: "method.coeff = { speed, clarity, body, bitterness, aroma }",
+    variable: "coeff",
+    before: `speed ${prevCoeff.speed}, clarity ${prevCoeff.clarity}, body ${prevCoeff.body}, bitterness ${prevCoeff.bitterness}, aroma ${prevCoeff.aroma}`,
+    after: `speed ${nextCoeff.speed}, clarity ${nextCoeff.clarity}, body ${nextCoeff.body}, bitterness ${nextCoeff.bitterness}, aroma ${nextCoeff.aroma}`,
+    effect: "Changing brew method swaps baseline coefficients used across extraction and flavor equations."
   });
 }
 
