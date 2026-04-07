@@ -33,33 +33,27 @@
         <section class="panel charts">
           <div class="chart-card">
             <h2>Extraction Intensity Over Normalized Time</h2>
+            <div id="axisModeControls" class="mode-toggle" aria-label="X-axis mode toggle"></div>
             <div id="graphModeControls" class="mode-toggle" aria-label="Graph mode toggle"></div>
             <div id="curveControls" class="curve-controls" aria-label="Curve legend and visibility"></div>
             <canvas id="timeChart" width="980" height="380" aria-label="Time extraction chart"></canvas>
           </div>
         </section>
       </div>
-
-      <aside class="panel radar-overlay" aria-live="polite">
-        <h2>Flavor Profile</h2>
-        <canvas id="radarChart" width="300" height="300" aria-label="Final profile radar chart"></canvas>
-      </aside>
-
-      <section class="panel charts">
-        <div class="chart-card">
-          <h2>Extraction Teaching Graph</h2>
-          <div id="axisModeControls" class="mode-toggle" aria-label="X-axis mode toggle"></div>
-          <div id="graphModeControls" class="mode-toggle" aria-label="Graph mode toggle"></div>
-          <div id="curveControls" class="curve-controls" aria-label="Curve legend and visibility"></div>
-          <canvas id="timeChart" width="980" height="380" aria-label="Time extraction chart"></canvas>
-        </div>
-      </section>
     </main>
 
     <aside class="panel radar-overlay" id="radarOverlay" aria-live="polite">
       <h2 class="radar-overlay-title">Flavor Profile</h2>
       <canvas id="radarChart" width="300" height="300" aria-label="Final profile radar chart"></canvas>
     </aside>
+
+    <section id="modelView" class="view-screen hidden">
+      <div class="panel model-panel">
+        <h2>Equations / Model</h2>
+        <nav id="modelToc" class="model-toc" aria-label="Model section navigation"></nav>
+        <div id="modelContent" class="model-content"></div>
+      </div>
+    </section>
 
     <section class="panel summary" id="summaryPanel">
       <h2>Interpretation</h2>
@@ -74,5 +68,6 @@
     </section>
 
     <script type="module" src="app.js"></script>
+    <script type="module" src="bootstrap.js"></script>
   </body>
 </html>

@@ -38,6 +38,8 @@ h1, h2, h3, p { margin: 0; }
   gap: 1rem;
   align-items: end;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 40;
 }
 
 .app-header h1 { font-size: 1.35rem; }
@@ -197,9 +199,9 @@ canvas {
 
 .radar-overlay {
   position: fixed;
-  top: 1rem;
+  bottom: 1rem;
   right: 1rem;
-  z-index: 25;
+  z-index: 20;
   width: min(290px, calc(100vw - 2rem));
   padding: 0.65rem;
   background: rgba(15, 23, 42, 0.88);
@@ -218,6 +220,10 @@ canvas {
   color: var(--muted);
   cursor: move;
   user-select: none;
+}
+
+.radar-overlay-title.dragging {
+  cursor: grabbing;
 }
 
 .radar-overlay canvas {
@@ -342,12 +348,50 @@ canvas {
   gap: 0.7rem;
 }
 
+.equation-popup {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: min(320px, calc(100vw - 1rem));
+  padding: 0.6rem;
+  border: 1px solid #33588b;
+  border-radius: 8px;
+  background: rgba(10, 20, 40, 0.94);
+  color: #dbe9ff;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.equation-popup.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.equation-title {
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.equation-expression {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #bcd8ff;
+}
+
+.equation-highlight {
+  color: #9be7b8;
+}
+
 @media (max-width: 1040px) {
   .layout { grid-template-columns: 1fr; }
   .controls { max-height: none; }
   .radar-overlay {
     width: min(240px, calc(100vw - 1rem));
-    top: 0.5rem;
+    bottom: 0.5rem;
     right: 0.5rem;
   }
 }
