@@ -204,17 +204,27 @@ canvas {
   padding: 0.65rem;
   background: rgba(15, 23, 42, 0.88);
   backdrop-filter: blur(3px);
+  resize: both;
+  overflow: hidden;
+  min-width: 200px;
+  min-height: 200px;
+  max-width: 50vw;
+  max-height: 70vh;
 }
 
-.radar-overlay h2 {
+.radar-overlay-title {
   font-size: 0.86rem;
   letter-spacing: 0.02em;
   color: var(--muted);
+  cursor: move;
+  user-select: none;
 }
 
 .radar-overlay canvas {
   margin-top: 0.45rem;
   width: 100%;
+  height: calc(100% - 1.5rem);
+  min-height: 150px;
   aspect-ratio: 1 / 1;
 }
 
@@ -340,8 +350,21 @@ canvas {
     top: 0.5rem;
     right: 0.5rem;
   }
-  .header-actions {
-    justify-items: stretch;
-    width: 100%;
-  }
 }
+
+.interpretation-box {
+  margin-top: 0.35rem;
+  padding: 0.7rem;
+  border: 1px solid #2a426d;
+  border-radius: 8px;
+  background: #0d1a33;
+  color: #cfe0ff;
+  line-height: 1.4;
+}
+
+.interpretation-box ul { margin: 0.35rem 0 0; padding-left: 1rem; }
+.interpretation-box li { margin: 0.15rem 0; }
+
+.equations-content h3 { margin-top: 0.5rem; font-size: 1rem; }
+.equations-content ul { margin: 0.35rem 0 0.7rem; padding-left: 1.1rem; color: #cde1ff; }
+.equations-content li { margin: 0.2rem 0; }

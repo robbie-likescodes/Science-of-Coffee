@@ -13,7 +13,7 @@ const METHOD_DYNAMICS = {
 export function runSimulation(processKey, params) {
   const m = deriveModel(processKey, params);
   const timeline = [];
-  const points = 80;
+  const points = 120;
 
   for (let i = 0; i <= points; i++) {
     const t = i / points;
@@ -89,6 +89,13 @@ export function runSimulation(processKey, params) {
   const adjusted = { ...last };
   const fe = m.filterCoeff;
 
+  const targetPoint = timeline.reduce((closest, point) => {
+    if (!closest) return point;
+    return Math.abs(point.seconds - targetStop) < Math.abs(closest.seconds - targetStop) ? point : closest;
+  }, null);
+
+  const adjusted = { ...targetPoint };
+  const fe = filterCoeff;
   adjusted.body = clamp(adjusted.body + fe.body);
   adjusted.polyphenols = clamp(adjusted.polyphenols + fe.polyphenols + 3 * m.finesMigrationRisk);
   adjusted.aromatics = clamp(adjusted.aromatics + fe.aroma);
@@ -100,9 +107,9 @@ export function runSimulation(processKey, params) {
   adjusted.sweetness = clamp(adjusted.sweetness * (0.92 + 0.2 * m.extractionEff));
 
   const finalProfile = {
-    acidity: adjusted.acidity,
-    sweetness: adjusted.sweetness,
-    bitterness: adjusted.bitterness,
+    acidity: clamp(adjusted.acidity * (0.92 + 0.16 * minerals)),
+    sweetness: clamp(adjusted.sweetness * (0.92 + 0.22 * extractionEff)),
+    bitterness: clamp(adjusted.bitterness * (1 + 0.2 * unevenness + 0.1 * pressureImpact)),
     body: adjusted.body,
     aroma: adjusted.aromatics,
     clarity: equationLibrary.finalClarity.compute({
@@ -273,14 +280,15 @@ function buildSummary(processKey, p, adjusted, window) {
   const tags = [];
   const name = processPresets[processKey].label;
 
-  if (p.acidity > 62 && p.clarity > 58) tags.push("brightness and clarity");
-  if (p.body > 65) tags.push("body-forward texture");
-  if (p.bitterness > 62 || p.polyphenols > 60 || adjusted.astringency > 58) tags.push("late-extraction harshness");
-  if (p.sweetness > 60 && p.bitterness < 50) tags.push("rounded sweetness");
-  if (p.aroma > 60) tags.push("expressive aroma");
+function buildInterpretation(processKey, model, guidance) {
+  const notes = [];
+  const m = processPresets[processKey];
 
-  const primary = tags[0] || "balanced extraction";
-  const secondary = tags[1] || "moderate intensity";
+  if (model.tempFactor > 0.8) notes.push("Higher temperature is accelerating both sweetness extraction and late bitterness rise.");
+  if (model.pressureImpact > 0.45) notes.push("Pressure is compressing extraction into a shorter, more urgent decision window.");
+  if (model.grindFine > 0.55 && model.pressureImpact > 0.3) notes.push("Fine grind plus pressure can cause fast early yield but harshness if pulled long.");
+  if (model.immersionBias > 0.7) notes.push("This method emphasizes body and suspended late compounds more than clarity.");
+  if (model.paperBias > 0.8) notes.push("Paper filtration reduces oils and harsh solids, improving clarity but lowering body weight.");
 
   return `${name} currently emphasizes ${primary} with ${secondary}. Suggested balance window: ${window.startSec}-${window.endSec}s (${Math.round(
     window.startNorm * 100

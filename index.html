@@ -10,7 +10,7 @@
     <header class="app-header panel">
       <div>
         <h1>Coffee Process & Extraction Characteristics Simulator</h1>
-        <p class="subtitle">Educational heuristic model for extraction behavior and flavor outcomes.</p>
+        <p class="subtitle">Educational heuristic model for extraction behavior and flavor outcomes (not a lab instrument).</p>
       </div>
       <div class="header-actions">
         <nav id="viewTabs" class="view-tabs" aria-label="Primary view navigation"></nav>
@@ -45,25 +45,33 @@
         <canvas id="radarChart" width="300" height="300" aria-label="Final profile radar chart"></canvas>
       </aside>
 
-      <section class="panel summary" id="summaryPanel">
-        <h2>Interpretation</h2>
-        <p id="summaryText"></p>
-        <div id="stats" class="stats-grid"></div>
+      <section class="panel charts">
+        <div class="chart-card">
+          <h2>Extraction Teaching Graph</h2>
+          <div id="axisModeControls" class="mode-toggle" aria-label="X-axis mode toggle"></div>
+          <div id="graphModeControls" class="mode-toggle" aria-label="Graph mode toggle"></div>
+          <div id="curveControls" class="curve-controls" aria-label="Curve legend and visibility"></div>
+          <canvas id="timeChart" width="980" height="380" aria-label="Time extraction chart"></canvas>
+        </div>
       </section>
     </main>
 
-    <main id="modelView" class="view-screen hidden" aria-live="polite">
-      <section class="panel model-panel">
-        <div class="model-intro">
-          <h2>Equations / Model</h2>
-          <p>
-            This simulator is an educational heuristic model. Equations below are the same definitions used by the runtime model, not a separate documentation-only layer.
-          </p>
-        </div>
-        <nav id="modelToc" class="model-toc" aria-label="Equations sections"></nav>
-        <div id="modelContent" class="model-content"></div>
-      </section>
-    </main>
+    <aside class="panel radar-overlay" id="radarOverlay" aria-live="polite">
+      <h2 class="radar-overlay-title">Flavor Profile</h2>
+      <canvas id="radarChart" width="300" height="300" aria-label="Final profile radar chart"></canvas>
+    </aside>
+
+    <section class="panel summary" id="summaryPanel">
+      <h2>Interpretation</h2>
+      <p id="summaryText"></p>
+      <div id="interpretationBox" class="interpretation-box"></div>
+      <div id="stats" class="stats-grid"></div>
+    </section>
+
+    <section class="panel summary" id="equationsPanel">
+      <h2>Equations / Model</h2>
+      <div id="equationsContent" class="equations-content"></div>
+    </section>
 
     <script type="module" src="app.js"></script>
   </body>

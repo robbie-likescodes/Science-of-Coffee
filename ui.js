@@ -90,7 +90,6 @@ export function createEquationPopupManager() {
   document.body.appendChild(popup);
 
   let hideTimer = null;
-
   function hide() {
     popup.classList.remove("visible");
   }
@@ -107,16 +106,15 @@ export function createEquationPopupManager() {
 
     popup.style.left = `${Math.min(rect.left + 8, window.innerWidth - 340)}px`;
     popup.style.top = `${Math.max(rect.top - 12, 10)}px`;
-
     popup.classList.add("visible");
     if (hideTimer) clearTimeout(hideTimer);
-    hideTimer = setTimeout(hide, 1400);
+    hideTimer = setTimeout(hide, 1500);
   }
 
   return { show, hide };
 }
 
-export function initGraphModeControls(container, modes, currentMode, onModeChange) {
+export function initModeControls(container, modes, currentMode, onModeChange) {
   container.innerHTML = "";
   Object.entries(modes).forEach(([key, label]) => {
     const btn = document.createElement("button");
@@ -268,12 +266,27 @@ export function renderModelDocumentation(tocEl, contentEl) {
 
 export function renderSummary(summaryEl, statsEl, text, profile) {
   summaryEl.textContent = text;
-  statsEl.innerHTML = "";
+  interpretationEl.innerHTML = `
+    <strong>${interpretation.title}</strong>
+    <div>${interpretation.windowText}</div>
+    <ul>${interpretation.bullets.map((b) => `<li>${b}</li>`).join("")}</ul>
+  `;
 
+  statsEl.innerHTML = "";
   ["acidity", "sweetness", "bitterness", "body", "polyphenols", "aroma", "clarity", "floralFruit", "chocoNut"].forEach((k) => {
     const stat = document.createElement("div");
     stat.className = "stat";
     stat.innerHTML = `<div class="label">${k}</div><div class="value">${Math.round(profile[k])}</div>`;
     statsEl.appendChild(stat);
   });
+}
+
+export function renderEquations(container, equations) {
+  container.innerHTML = `
+    <p class="subtitle">These equations are intentionally heuristic teaching relationships, not precision chemistry.</p>
+    <h3>Core timing model</h3>
+    <ul>${equations.core.map((line) => `<li>${line}</li>`).join("")}</ul>
+    <h3>Extraction families</h3>
+    <ul>${equations.families.map((line) => `<li>${line}</li>`).join("")}</ul>
+  `;
 }

@@ -23,7 +23,7 @@ export const brewMethodPresets = {
       bodyEmphasis: 70,
       clarityEmphasis: 45
     },
-    coeff: { speed: 1.32, clarity: 0.52, body: 1.22, bitterness: 1.15, aroma: 1.0 }
+    coeff: { speed: 1.32, clarity: 0.52, body: 1.22, bitterness: 1.15, aroma: 1.0, immersion: 0.08, windowWidth: 0.32 }
   },
   pourOver: {
     label: "Pour Over",
@@ -49,7 +49,7 @@ export const brewMethodPresets = {
       bodyEmphasis: 42,
       clarityEmphasis: 82
     },
-    coeff: { speed: 0.82, clarity: 1.28, body: 0.74, bitterness: 0.92, aroma: 1.06 }
+    coeff: { speed: 0.82, clarity: 1.28, body: 0.74, bitterness: 0.92, aroma: 1.06, immersion: 0.22, windowWidth: 0.58 }
   },
   frenchPress: {
     label: "French Press",
@@ -75,7 +75,7 @@ export const brewMethodPresets = {
       bodyEmphasis: 82,
       clarityEmphasis: 34
     },
-    coeff: { speed: 0.75, clarity: 0.68, body: 1.38, bitterness: 1.03, aroma: 0.96 }
+    coeff: { speed: 0.75, clarity: 0.68, body: 1.38, bitterness: 1.03, aroma: 0.96, immersion: 0.95, windowWidth: 0.62 }
   },
   siphon: {
     label: "Siphon",
@@ -101,7 +101,7 @@ export const brewMethodPresets = {
       bodyEmphasis: 50,
       clarityEmphasis: 69
     },
-    coeff: { speed: 0.95, clarity: 1.08, body: 0.92, bitterness: 0.96, aroma: 1.2 }
+    coeff: { speed: 0.95, clarity: 1.08, body: 0.92, bitterness: 0.96, aroma: 1.2, immersion: 0.45, windowWidth: 0.48 }
   },
   aeroPress: {
     label: "AeroPress",
@@ -127,7 +127,7 @@ export const brewMethodPresets = {
       bodyEmphasis: 58,
       clarityEmphasis: 62
     },
-    coeff: { speed: 1.02, clarity: 0.98, body: 1.0, bitterness: 0.98, aroma: 1.03 }
+    coeff: { speed: 1.02, clarity: 0.98, body: 1.0, bitterness: 0.98, aroma: 1.03, immersion: 0.52, windowWidth: 0.44 }
   },
   coldBrew: {
     label: "Cold Brew",
@@ -153,7 +153,7 @@ export const brewMethodPresets = {
       bodyEmphasis: 76,
       clarityEmphasis: 40
     },
-    coeff: { speed: 0.36, clarity: 0.82, body: 1.12, bitterness: 0.7, aroma: 0.74 }
+    coeff: { speed: 0.36, clarity: 0.82, body: 1.12, bitterness: 0.7, aroma: 0.74, immersion: 1.05, windowWidth: 0.74 }
   }
 };
 
