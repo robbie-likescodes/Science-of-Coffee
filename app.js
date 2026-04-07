@@ -34,8 +34,38 @@ const modelToc = document.getElementById("modelToc");
 const modelContent = document.getElementById("modelContent");
 const processPickerWrap = document.getElementById("processPickerWrap");
 
+const requiredElements = {
+  processSelect,
+  processDescription,
+  controlsContainer,
+  summaryText,
+  interpretationBox,
+  equationsContent,
+  statsEl,
+  timeChart,
+  radarChart,
+  graphModeControls,
+  axisModeControls,
+  curveControls,
+  viewTabs,
+  simulatorView,
+  modelView,
+  modelToc,
+  modelContent,
+  processPickerWrap
+};
+
+const missingElements = Object.entries(requiredElements)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missingElements.length) {
+  console.error("[coffee-sim] Missing required DOM elements:", missingElements.join(", "));
+}
+
 const state = {
   process: "espresso",
+  view: "simulator",
   graphMode: "flavor",
   xMode: "actual",
   visibleCurves: getDefaultVisibleCurves("flavor"),
@@ -86,6 +116,53 @@ function rerender() {
   drawRadarChart(radarChart, result.finalProfile, { compact: true });
   renderSummary(summaryText, interpretationBox, statsEl, result.summary, result.finalProfile, result.interpretation);
   renderEquations(equationsContent, result.equations);
+}
+
+function initRadarOverlayInteractions() {
+  if (!radarOverlay) return;
+  const title = radarOverlay.querySelector(".radar-overlay-title");
+  if (!title) return;
+
+  let dragging = false;
+  let startX = 0;
+  let startY = 0;
+  let baseLeft = 0;
+  let baseTop = 0;
+
+  const onMove = (event) => {
+    if (!dragging) return;
+    const nextLeft = Math.min(
+      Math.max(8, baseLeft + (event.clientX - startX)),
+      window.innerWidth - radarOverlay.offsetWidth - 8
+    );
+    const nextTop = Math.min(
+      Math.max(8, baseTop + (event.clientY - startY)),
+      window.innerHeight - radarOverlay.offsetHeight - 8
+    );
+    radarOverlay.style.left = `${nextLeft}px`;
+    radarOverlay.style.top = `${nextTop}px`;
+    radarOverlay.style.right = "auto";
+  };
+
+  const onUp = () => {
+    dragging = false;
+    title.classList.remove("dragging");
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+  };
+
+  title.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    dragging = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    baseLeft = radarOverlay.offsetLeft;
+    baseTop = radarOverlay.offsetTop;
+    title.classList.add("dragging");
+    title.setPointerCapture(event.pointerId);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  });
 }
 
 const sliderEquationMap = {
@@ -282,7 +359,12 @@ function setProcess(processKey) {
   rerender();
 }
 
-initProcessSelector(processSelect, setProcess);
-renderGraphControlState();
-initRadarOverlayInteractions();
-setProcess(state.process);
+if (!window.__coffeeSimInitialized && missingElements.length === 0) {
+  window.__coffeeSimInitialized = true;
+  initProcessSelector(processSelect, setProcess);
+  renderGraphControlState();
+  renderViewState();
+  renderModelDocumentation(modelToc, modelContent);
+  initRadarOverlayInteractions();
+  setProcess(state.process);
+}
