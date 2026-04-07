@@ -66,6 +66,31 @@ if (missingCoreElements.length) {
   console.error("[coffee-sim] Missing required DOM elements:", missingCoreElements.join(", "));
 }
 
+const coreElements = {
+  processSelect,
+  processDescription,
+  controlsContainer,
+  summaryText,
+  interpretationBox,
+  equationsContent,
+  statsEl,
+  timeChart,
+  radarChart,
+  graphModeControls,
+  axisModeControls,
+  curveControls,
+  simulatorView,
+  processPickerWrap
+};
+
+const missingCoreElements = Object.entries(coreElements)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missingCoreElements.length) {
+  console.error("[coffee-sim] Missing required DOM elements:", missingCoreElements.join(", "));
+}
+
 const state = {
   process: "espresso",
   view: "simulator",
@@ -108,8 +133,7 @@ function renderViewState() {
   const showModel = state.view === "model";
   const showVariable = state.view === "variable";
   simulatorView.classList.toggle("hidden", !showSimulator);
-  if (modelView) modelView.classList.toggle("hidden", !showModel);
-  if (variableView) variableView.classList.toggle("hidden", !showVariable);
+  if (modelView) modelView.classList.toggle("hidden", showSimulator);
   processPickerWrap.classList.toggle("hidden", !showSimulator);
   processDescription.classList.toggle("hidden", !showSimulator);
   if (radarOverlay) radarOverlay.classList.toggle("hidden", !showSimulator);
@@ -392,51 +416,13 @@ function applyMethodDefaults(processKey) {
   rerender();
 }
 
-function renderVariableView(variableKey) {
-  if (!variableContent) return;
-  const doc = variableDocs[variableKey];
-  if (!doc) {
-    state.view = "simulator";
-    renderViewState();
-    return;
-  }
-  const processLabel = brewMethodPresets[state.process]?.label || state.process;
-  renderVariableDocumentation(variableContent, doc, processLabel, () => {
-    window.location.hash = "#simulator";
-  });
-}
-
-function applyRouteFromHash() {
-  const hash = window.location.hash.replace(/^#/, "");
-  if (!hash || hash === "simulator") {
-    state.view = "simulator";
-    renderViewState();
-    return;
-  }
-  if (hash === "model") {
-    state.view = "model";
-    renderViewState();
-    return;
-  }
-  if (hash.startsWith("variable/")) {
-    state.view = "variable";
-    renderViewState();
-    renderVariableView(hash.split("/")[1]);
-    return;
-  }
-  state.view = "simulator";
-  renderViewState();
-}
-
 if (missingCoreElements.length === 0) {
   initProcessSelector(processSelect, setProcess);
   renderGraphControlState();
   if (viewTabs && modelView) {
+    renderViewState();
     if (modelToc && modelContent) renderModelDocumentation(modelToc, modelContent);
   }
   initRadarOverlayInteractions();
   setProcess(state.process);
-  window.addEventListener("hashchange", applyRouteFromHash);
-  if (!window.location.hash) window.location.hash = "#simulator";
-  applyRouteFromHash();
 }

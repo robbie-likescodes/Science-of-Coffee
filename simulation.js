@@ -322,20 +322,6 @@ function findNearestPointBySeconds(timeline, seconds) {
   }, null);
 }
 
-function formatDuration(seconds) {
-  if (seconds >= 3600) {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.round((seconds % 3600) / 60);
-    return mins === 0 ? `${hours}h` : `${hours}h ${mins}m`;
-  }
-  if (seconds >= 60) {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.round(seconds % 60);
-    return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
-  }
-  return `${Math.round(seconds)}s`;
-}
-
 function applyFilterAdjustments(point, model) {
   const adjusted = { ...(point || {}) };
   const fe = model.filterCoeff;
@@ -379,7 +365,7 @@ export function getModelDerivatives(processKey, params) {
 
 function buildSummary(processKey, profile, guidance) {
   const methodName = processPresets[processKey]?.label || "Brew";
-  return `${methodName}: balanced window ${formatDuration(guidance.balanced.start)}-${formatDuration(guidance.balanced.end)}. Acidity ${Math.round(
+  return `${methodName}: balanced window ${Math.round(guidance.balanced.start)}-${Math.round(guidance.balanced.end)}s. Acidity ${Math.round(
     profile.acidity
   )}, sweetness ${Math.round(profile.sweetness)}, bitterness ${Math.round(profile.bitterness)}, body ${Math.round(profile.body)}.`;
 }
@@ -396,7 +382,7 @@ function buildInterpretation(processKey, model, guidance) {
 
   return {
     title: `${methodName} interpretation`,
-    windowText: `Recommended stop window: ${formatDuration(guidance.balanced.start)}-${formatDuration(guidance.balanced.end)} (target ${formatDuration(guidance.targetStop)}).`,
+    windowText: `Recommended stop window: ${Math.round(guidance.balanced.start)}-${Math.round(guidance.balanced.end)}s (target ${Math.round(guidance.targetStop)}s).`,
     bullets
   };
 }
