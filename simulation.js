@@ -10,6 +10,56 @@ const METHOD_DYNAMICS = {
   coldBrew: { pressure: 0.0, agitation: 0.32, immersion: 1.0 }
 };
 
+const CONTROL_META = {
+  dose: {
+    title: "Concentration term",
+    equation: "concentration = clamp((dose / brewRatio) / 2.2, 0.35, 3.2)",
+    variable: "concentrationFactor",
+    effect: "Higher dose raises concentration and body while increasing late harshness risk."
+  },
+  brewRatio: {
+    title: "Concentration term",
+    equation: "concentration = clamp((dose / brewRatio) / 2.2, 0.35, 3.2)",
+    variable: "concentrationFactor",
+    effect: "Higher brew ratio lowers concentration and generally softens body/harshness."
+  },
+  grindSize: {
+    title: "Grind-flow coupling",
+    equation: "grindFine = 1 - s(grindSize)",
+    variable: "grindFineFactor",
+    effect: "Finer grind accelerates extraction and can increase resistance sensitivity."
+  },
+  temperature: {
+    title: "Temperature kinetics",
+    equation: "tempRate = clamp(exp(0.028×(T-93)), 0.16, 1.65)",
+    variable: "tempFactor",
+    effect: "Higher temperature speeds extraction and increases late-stage risk."
+  },
+  pressure: {
+    title: "Method-weighted pressure",
+    equation: "pressureUseful = pressureFactor × methodPressure × flow damping",
+    variable: "pressureUseful",
+    effect: "Pressure impact depends on brew method and flow resistance."
+  },
+  contactTime: {
+    title: "Contact-time progression",
+    equation: "contactFactor = clamp(0.72 + 0.62×sqrt(contactNorm), 0.35, 1.8)",
+    variable: "contactFactor",
+    effect: "Longer contact moves extraction further into late compounds."
+  },
+  filterType: {
+    title: "Filter output adjustment",
+    equation: "finalAdjustments += filterEffects[filterType]",
+    variable: "filterEffect",
+    effect: "Filter type shifts body, clarity, oils, and polyphenol expression.",
+    format: (v) => `body ${v.body}, clarity ${v.clarity}, polyphenols ${v.polyphenols}, aroma ${v.aroma}, lipids ${v.lipids}`
+  }
+};
+
+export function getControlEquationMeta(key) {
+  return CONTROL_META[key] || null;
+}
+
 export function runSimulation(processKey, params) {
   const m = deriveModel(processKey, params);
   const timeline = [];
@@ -20,8 +70,22 @@ export function runSimulation(processKey, params) {
     const effectiveProgress = t * m.extractionSpeed * m.contactFactor;
     const tt = clamp(effectiveProgress, 0, 1.25);
 
-    const organicAcids = equationLibrary.organicAcids.compute({ tt, buffering: m.buffering, minerals: m.minerals, roast: m.roast, tempAcidShift: m.tempAcidShift });
-    const sugars = equationLibrary.sugars.compute({ tt, extractionEff: m.extractionEff, unevenness: m.unevenness, roast: m.roast, tempSweetBoost: m.tempSweetBoost });
+    const organicAcids = equationLibrary.organicAcids.compute({
+      tt,
+      buffering: m.buffering,
+      minerals: m.minerals,
+      roast: m.roast,
+      tempAcidShift: m.tempAcidShift
+    });
+
+    const sugars = equationLibrary.sugars.compute({
+      tt,
+      extractionEff: m.extractionEff,
+      unevenness: m.unevenness,
+      roast: m.roast,
+      tempSweetBoost: m.tempSweetBoost
+    });
+
     const polyphenols = equationLibrary.polyphenols.compute({
       tt,
       fines: m.fines,
@@ -58,7 +122,14 @@ export function runSimulation(processKey, params) {
 
     const acidity = organicAcids * (0.83 + 0.16 * m.clarityBias) * (1 - 0.18 * m.roast);
     const sweetness = (0.6 * sugars + 0.34 * maillard) * (0.9 + 0.12 * m.extractionEff) * (1 - 0.14 * m.unevenness);
-    const bitterness = equationLibrary.flavorBitterness.compute({ polyphenols, maillard, melanoidins, roast: m.roast, concentration: m.concentration, pressureHarshness: m.pressureHarshness });
+    const bitterness = equationLibrary.flavorBitterness.compute({
+      polyphenols,
+      maillard,
+      melanoidins,
+      roast: m.roast,
+      concentration: m.concentration,
+      pressureHarshness: m.pressureHarshness
+    });
     const burnt = (0.36 * maillard + 0.48 * melanoidins + 24 * lateRise(tt, 0.7, 2.1)) * (0.72 + 0.46 * m.roast);
     const body = (0.62 * lipids + 0.26 * melanoidins + 11 * m.concentration) * (0.84 + 0.24 * m.bodyBias);
     const astringency =
@@ -67,8 +138,8 @@ export function runSimulation(processKey, params) {
 
     timeline.push({
       t,
-      timeSec: t * params.contactTime,
-      extractionProgress: clamp(tt / 1.25, 0, 1),
+      seconds: t * params.contactTime,
+      progress: t,
       organicAcids: clamp(organicAcids),
       sugars: clamp(sugars),
       polyphenols: clamp(polyphenols),
@@ -85,31 +156,14 @@ export function runSimulation(processKey, params) {
     });
   }
 
-  const last = timeline[timeline.length - 1];
-  const adjusted = { ...last };
-  const fe = m.filterCoeff;
-
-  const targetPoint = timeline.reduce((closest, point) => {
-    if (!closest) return point;
-    return Math.abs(point.seconds - targetStop) < Math.abs(closest.seconds - targetStop) ? point : closest;
-  }, null);
-
-  const adjusted = { ...targetPoint };
-  const fe = filterCoeff;
-  adjusted.body = clamp(adjusted.body + fe.body);
-  adjusted.polyphenols = clamp(adjusted.polyphenols + fe.polyphenols + 3 * m.finesMigrationRisk);
-  adjusted.aromatics = clamp(adjusted.aromatics + fe.aroma);
-  adjusted.lipids = clamp(adjusted.lipids + fe.lipids);
-  adjusted.bitterness = clamp(adjusted.bitterness * (1 + 0.2 * m.unevenness + 0.16 * m.pressureHarshness));
-  adjusted.astringency = clamp(adjusted.astringency * (1 + 0.2 * m.unevenness + 0.14 * m.finesMigrationRisk));
-
-  adjusted.acidity = clamp(adjusted.acidity * (0.94 + 0.1 * m.minerals));
-  adjusted.sweetness = clamp(adjusted.sweetness * (0.92 + 0.2 * m.extractionEff));
+  const guidance = computeGuidance(timeline, params.contactTime);
+  const targetPoint = findNearestPointBySeconds(timeline, guidance.targetStop);
+  const adjusted = applyFilterAdjustments(targetPoint, m);
 
   const finalProfile = {
-    acidity: clamp(adjusted.acidity * (0.92 + 0.16 * minerals)),
-    sweetness: clamp(adjusted.sweetness * (0.92 + 0.22 * extractionEff)),
-    bitterness: clamp(adjusted.bitterness * (1 + 0.2 * unevenness + 0.1 * pressureImpact)),
+    acidity: clamp(adjusted.acidity * (0.92 + 0.16 * m.minerals)),
+    sweetness: clamp(adjusted.sweetness * (0.92 + 0.22 * m.extractionEff)),
+    bitterness: clamp(adjusted.bitterness * (1 + 0.2 * m.unevenness + 0.1 * m.pressureHarshness)),
     body: adjusted.body,
     aroma: adjusted.aromatics,
     clarity: equationLibrary.finalClarity.compute({
@@ -117,7 +171,7 @@ export function runSimulation(processKey, params) {
       body: adjusted.body,
       polyphenols: adjusted.polyphenols,
       clarityBias: m.clarityBias,
-      filterClarity: fe.clarity
+      filterClarity: m.filterCoeff.clarity
     }),
     polyphenols: adjusted.polyphenols,
     roastiness: clamp(adjusted.burnt * 0.8 + adjusted.maillard * 0.22),
@@ -125,22 +179,26 @@ export function runSimulation(processKey, params) {
     chocoNut: clamp(adjusted.sweetness * 0.24 + adjusted.body * 0.4 + adjusted.maillard * 0.46)
   };
 
-  const recommendedWindow = computeRecommendedWindow(timeline, params.contactTime);
-  const summary = buildSummary(processKey, finalProfile, adjusted, recommendedWindow);
+  const clampedProfile = characteristics.reduce((acc, key) => {
+    acc[key] = clamp(finalProfile[key]);
+    return acc;
+  }, {});
 
   return {
     timeline,
-    finalProfile: characteristics.reduce((acc, key) => {
-      acc[key] = clamp(finalProfile[key]);
-      return acc;
-    }, {}),
-    summary,
-    recommendedWindow
+    finalProfile: clampedProfile,
+    guidance,
+    summary: buildSummary(processKey, clampedProfile, guidance),
+    interpretation: buildInterpretation(processKey, m, guidance),
+    equations: {
+      core: [equationLibrary.extractionSpeed.formula, "effectiveProgress = t × extractionSpeed × contactFactor", "tt = clamp(effectiveProgress, 0, 1.25)"],
+      families: [equationLibrary.organicAcids.formula, equationLibrary.sugars.formula, equationLibrary.polyphenols.formula, equationLibrary.flavorBitterness.formula]
+    }
   };
 }
 
 function deriveModel(processKey, params) {
-  const method = processPresets[processKey];
+  const method = processPresets[processKey] || processPresets.pourOver;
   const c = method.coeff;
   const dynamics = METHOD_DYNAMICS[processKey] || METHOD_DYNAMICS.pourOver;
   const grindFine = 1 - s(params.grindSize);
@@ -192,7 +250,6 @@ function deriveModel(processKey, params) {
   });
 
   return {
-    method,
     c,
     grindFine,
     fines,
@@ -202,18 +259,16 @@ function deriveModel(processKey, params) {
     bodyBias,
     clarityBias,
     agitation: agitationEffect,
-    pressureFactor,
     extractionEff,
     concentration,
     unevenness,
-    preinfusionRatio,
-    tempRate,
     tempSweetBoost,
     tempLateRisk,
+    tempRate,
     tempAcidShift,
     tempAroma,
     contactFactor,
-    flowResistance,
+    preinfusionRatio,
     pressureUseful,
     pressureHarshness,
     finesMigrationRisk,
@@ -222,30 +277,63 @@ function deriveModel(processKey, params) {
   };
 }
 
-function computeRecommendedWindow(timeline, contactTime) {
-  const scores = timeline.map((p) =>
-    0.36 * p.sweetness + 0.24 * p.acidity + 0.16 * p.aromatics - 0.24 * p.bitterness - 0.2 * p.astringency - 0.12 * p.burnt
-  );
-  const peak = Math.max(...scores);
-  const threshold = peak * 0.965;
+function computeGuidance(timeline, contactTime) {
+  const scores = timeline.map((p) => 0.36 * p.sweetness + 0.24 * p.acidity + 0.16 * p.aromatics - 0.24 * p.bitterness - 0.2 * p.astringency - 0.12 * p.burnt);
+  const peakScore = Math.max(...scores);
+  const peakIndex = scores.indexOf(peakScore);
 
-  let start = scores.findIndex((v, i) => v >= threshold && timeline[i].bitterness < timeline[i].sweetness + 8);
-  if (start < 0) start = Math.max(0, scores.indexOf(peak) - 4);
+  let startIndex = Math.max(0, peakIndex - 8);
+  let endIndex = Math.min(timeline.length - 1, peakIndex + 8);
 
-  let end = start;
-  for (let i = start; i < scores.length; i++) {
-    const harshRise = timeline[i].bitterness > 1.08 * timeline[i].sweetness || timeline[i].astringency > 55;
-    if (scores[i] >= threshold && !harshRise) end = i;
-    else if (i > start) break;
+  for (let i = peakIndex; i >= 0; i--) {
+    if (scores[i] < peakScore * 0.95) {
+      startIndex = i;
+      break;
+    }
   }
 
-  const toNorm = (idx) => clamp(idx / (timeline.length - 1), 0, 1);
+  for (let i = peakIndex; i < scores.length; i++) {
+    const harsh = timeline[i].bitterness > timeline[i].sweetness + 8 || timeline[i].astringency > 55;
+    if (scores[i] < peakScore * 0.95 || harsh) {
+      endIndex = i;
+      break;
+    }
+  }
+
+  const toSec = (idx) => clamp((idx / (timeline.length - 1)) * contactTime, 0, contactTime);
+  const sweetPeakIndex = timeline.reduce((bestIdx, p, idx, arr) => (p.sweetness > arr[bestIdx].sweetness ? idx : bestIdx), 0);
+
+  const earlyEnd = Math.max(1, Math.floor(startIndex * 0.75));
+  const lateStart = Math.min(timeline.length - 1, Math.ceil(endIndex * 1.02));
+
   return {
-    startNorm: toNorm(start),
-    endNorm: toNorm(Math.max(end, start + 1)),
-    startSec: Math.round(toNorm(start) * contactTime),
-    endSec: Math.round(toNorm(Math.max(end, start + 1)) * contactTime)
+    early: { start: 0, end: toSec(earlyEnd) },
+    balanced: { start: toSec(startIndex), end: toSec(endIndex) },
+    late: { start: toSec(lateStart), end: contactTime },
+    targetStop: toSec(Math.round((startIndex + endIndex) / 2)),
+    sweetPeakTime: toSec(sweetPeakIndex)
   };
+}
+
+function findNearestPointBySeconds(timeline, seconds) {
+  return timeline.reduce((closest, point) => {
+    if (!closest) return point;
+    return Math.abs(point.seconds - seconds) < Math.abs(closest.seconds - seconds) ? point : closest;
+  }, null);
+}
+
+function applyFilterAdjustments(point, model) {
+  const adjusted = { ...(point || {}) };
+  const fe = model.filterCoeff;
+  adjusted.body = clamp((adjusted.body || 0) + fe.body);
+  adjusted.polyphenols = clamp((adjusted.polyphenols || 0) + fe.polyphenols + 3 * model.finesMigrationRisk);
+  adjusted.aromatics = clamp((adjusted.aromatics || 0) + fe.aroma);
+  adjusted.lipids = clamp((adjusted.lipids || 0) + fe.lipids);
+  adjusted.bitterness = clamp((adjusted.bitterness || 0) * (1 + 0.2 * model.unevenness + 0.16 * model.pressureHarshness));
+  adjusted.astringency = clamp((adjusted.astringency || 0) * (1 + 0.2 * model.unevenness + 0.14 * model.finesMigrationRisk));
+  adjusted.acidity = clamp((adjusted.acidity || 0) * (0.94 + 0.1 * model.minerals));
+  adjusted.sweetness = clamp((adjusted.sweetness || 0) * (0.92 + 0.2 * model.extractionEff));
+  return adjusted;
 }
 
 export function getModelDerivatives(processKey, params) {
@@ -254,7 +342,6 @@ export function getModelDerivatives(processKey, params) {
     extractionSpeed: model.extractionSpeed,
     tempFactor: model.tempRate,
     tempLateRisk: model.tempLateRisk,
-    pressureFactor: model.pressureFactor,
     pressureUseful: model.pressureUseful,
     pressureHarshness: model.pressureHarshness,
     agitationFactor: model.agitation,
@@ -276,23 +363,26 @@ export function getModelDerivatives(processKey, params) {
   };
 }
 
-function buildSummary(processKey, p, adjusted, window) {
-  const tags = [];
-  const name = processPresets[processKey].label;
+function buildSummary(processKey, profile, guidance) {
+  const methodName = processPresets[processKey]?.label || "Brew";
+  return `${methodName}: balanced window ${Math.round(guidance.balanced.start)}-${Math.round(guidance.balanced.end)}s. Acidity ${Math.round(
+    profile.acidity
+  )}, sweetness ${Math.round(profile.sweetness)}, bitterness ${Math.round(profile.bitterness)}, body ${Math.round(profile.body)}.`;
+}
 
 function buildInterpretation(processKey, model, guidance) {
-  const notes = [];
-  const m = processPresets[processKey];
+  const methodName = processPresets[processKey]?.label || "brew";
+  const bullets = [];
 
-  if (model.tempFactor > 0.8) notes.push("Higher temperature is accelerating both sweetness extraction and late bitterness rise.");
-  if (model.pressureImpact > 0.45) notes.push("Pressure is compressing extraction into a shorter, more urgent decision window.");
-  if (model.grindFine > 0.55 && model.pressureImpact > 0.3) notes.push("Fine grind plus pressure can cause fast early yield but harshness if pulled long.");
-  if (model.immersionBias > 0.7) notes.push("This method emphasizes body and suspended late compounds more than clarity.");
-  if (model.paperBias > 0.8) notes.push("Paper filtration reduces oils and harsh solids, improving clarity but lowering body weight.");
+  if (model.tempLateRisk > 0.7) bullets.push("High temperature increases late extraction harshness; stop slightly earlier.");
+  if (model.pressureHarshness > 0.35) bullets.push("Pressure/flow mismatch risk is elevated; coarsen grind or reduce pressure aggressiveness.");
+  if (model.unevenness > 0.5) bullets.push("Uneven flow is amplifying bitterness/astringency; improve puck/bed uniformity.");
+  if (model.finesMigrationRisk > 0.45) bullets.push("Fines migration is high; reduce agitation to smooth the cup.");
+  if (bullets.length === 0) bullets.push("Current settings are in a stable extraction zone with balanced sweetness and clarity.");
 
-  return `${name} currently emphasizes ${primary} with ${secondary}. Suggested balance window: ${window.startSec}-${window.endSec}s (${Math.round(
-    window.startNorm * 100
-  )}-${Math.round(window.endNorm * 100)}% brew progress), based on sweetness/aroma gains before bitterness and astringency accelerate. Acidity ${Math.round(
-    p.acidity
-  )}, sweetness ${Math.round(p.sweetness)}, bitterness ${Math.round(p.bitterness)}, body ${Math.round(p.body)}, and polyphenols ${Math.round(p.polyphenols)}.`;
+  return {
+    title: `${methodName} interpretation`,
+    windowText: `Recommended stop window: ${Math.round(guidance.balanced.start)}-${Math.round(guidance.balanced.end)}s (target ${Math.round(guidance.targetStop)}s).`,
+    bullets
+  };
 }
