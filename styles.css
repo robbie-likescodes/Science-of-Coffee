@@ -125,6 +125,23 @@ select {
   font-size: 0.95rem;
 }
 
+.control-title-link {
+  background: none;
+  border: 0;
+  color: #b6d9ff;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.control-title-link:hover {
+  color: #e6f2ff;
+}
+
 .charts {
   padding: 1rem;
   display: grid;

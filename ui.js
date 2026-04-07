@@ -41,7 +41,7 @@ export function renderMethodDescription(descriptionEl, processKey) {
   descriptionEl.textContent = brewMethodPresets[processKey]?.description || "";
 }
 
-export function renderControls(container, state, processKey, onInput) {
+export function renderControls(container, state, processKey, onInput, onTitleClick) {
   container.innerHTML = "";
   const useHourContactTime = processKey === "coldBrew";
 
@@ -55,8 +55,13 @@ export function renderControls(container, state, processKey, onInput) {
 
     const head = document.createElement("div");
     head.className = "control-head";
-    const title = document.createElement("strong");
+    const title = document.createElement("button");
+    title.type = "button";
+    title.className = "control-title-link";
     title.textContent = label;
+    title.addEventListener("click", () => {
+      if (typeof onTitleClick === "function") onTitleClick(key);
+    });
     const value = document.createElement("small");
     value.id = `value-${key}`;
     value.textContent = key === "temperature"
@@ -99,6 +104,60 @@ export function renderControls(container, state, processKey, onInput) {
 
     container.appendChild(wrapper);
   });
+}
+
+export function renderVariableDocumentation(container, variableDoc, processLabel, onBack) {
+  if (!container) return;
+  if (!variableDoc) {
+    container.innerHTML = "<p>Variable details are unavailable.</p>";
+    return;
+  }
+
+  container.innerHTML = "";
+
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "mode-btn";
+  back.textContent = "← Back to Simulator";
+  back.addEventListener("click", () => {
+    if (typeof onBack === "function") onBack();
+  });
+
+  const h2 = document.createElement("h2");
+  h2.textContent = variableDoc.title;
+  const subtitle = document.createElement("p");
+  subtitle.className = "subtitle";
+  subtitle.textContent = variableDoc.definition;
+
+  const relevance = document.createElement("article");
+  relevance.className = "eq-card";
+  relevance.innerHTML = `<h3>Why it matters</h3><p>${variableDoc.relevance}</p>`;
+
+  const methods = document.createElement("article");
+  methods.className = "eq-card";
+  methods.innerHTML = `<h3>Method behavior</h3><p><strong>Current method (${processLabel}):</strong> ${variableDoc.methods.current}</p>`;
+  const methodList = document.createElement("ul");
+  methodList.className = "eq-vars";
+  variableDoc.methods.general.forEach((entry) => {
+    const li = document.createElement("li");
+    li.textContent = entry;
+    methodList.appendChild(li);
+  });
+  methods.appendChild(methodList);
+
+  const flavor = document.createElement("article");
+  flavor.className = "eq-card";
+  flavor.innerHTML = "<h3>How adjusting it affects flavor</h3>";
+  const flavorList = document.createElement("ul");
+  flavorList.className = "eq-vars";
+  variableDoc.flavorEffects.forEach((entry) => {
+    const li = document.createElement("li");
+    li.textContent = entry;
+    flavorList.appendChild(li);
+  });
+  flavor.appendChild(flavorList);
+
+  container.append(back, h2, subtitle, relevance, methods, flavor);
 }
 
 export function createEquationPopupManager() {
