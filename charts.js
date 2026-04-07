@@ -4,6 +4,11 @@ export const GRAPH_MODES = {
   overlay: "Overlay"
 };
 
+export const X_AXIS_MODES = {
+  actual: "Actual time (s)",
+  normalized: "Normalized progress"
+};
+
 const SERIES = {
   flavor: [
     { key: "sweetness", label: "Sweetness", color: "#7ff59b", family: "flavor" },
@@ -15,7 +20,7 @@ const SERIES = {
   ],
   chemical: [
     { key: "organicAcids", label: "Organic Acids", color: "#5ec8ff", family: "chemical" },
-    { key: "sugars", label: "Sucrose / Sugars", color: "#93f57b", family: "chemical" },
+    { key: "sugars", label: "Sugars", color: "#93f57b", family: "chemical" },
     { key: "polyphenols", label: "Polyphenols", color: "#ff4d6d", family: "chemical" },
     { key: "maillard", label: "Maillard / Caramelized", color: "#ffb703", family: "chemical" },
     { key: "melanoidins", label: "Melanoidins", color: "#d48a39", family: "chemical" },
@@ -39,24 +44,76 @@ export function getDefaultVisibleCurves(mode) {
   const visible = {};
   const all = getSeriesForMode(mode);
   all.forEach((s, i) => {
-    if (mode !== "overlay") {
-      visible[s.key] = true;
-    } else {
-      visible[s.key] = i < 8 || ["sweetness", "acidity", "bitterness", "body", "polyphenols"].includes(s.key);
-    }
+    visible[s.key] = mode !== "overlay" ? true : i < 9;
   });
   return visible;
 }
 
-export function drawTimeChart(canvas, timeline, mode, visibleCurves) {
+function xFromPoint(point, xMode) {
+  return xMode === "actual" ? point.seconds : point.progress;
+}
+
+function drawGuidanceZones(ctx, pad, cw, ch, guidance, xMax, xMode) {
+  const zones = [
+    { ...guidance.early, color: "rgba(71, 133, 255, 0.15)" },
+    { ...guidance.balanced, color: "rgba(84, 221, 152, 0.16)" },
+    { ...guidance.late, color: "rgba(255, 121, 121, 0.15)" }
+  ];
+
+  zones.forEach((zone) => {
+    const start = xMode === "actual" ? zone.start : zone.start / xMax;
+    const end = xMode === "actual" ? zone.end : zone.end / xMax;
+    const x0 = pad.l + Math.max(0, start) / xMax * cw;
+    const x1 = pad.l + Math.min(xMax, end) / xMax * cw;
+    ctx.fillStyle = zone.color;
+    ctx.fillRect(x0, pad.t, Math.max(0, x1 - x0), ch);
+  });
+}
+
+function drawMarkers(ctx, pad, cw, ch, guidance, xMax, xMode) {
+  const toX = (v) => {
+    const x = xMode === "actual" ? v : v / xMax;
+    return pad.l + (x / xMax) * cw;
+  };
+
+  const targetX = toX(guidance.targetStop);
+  ctx.strokeStyle = "#71e39e";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.moveTo(targetX, pad.t);
+  ctx.lineTo(targetX, pad.t + ch);
+  ctx.stroke();
+
+  const sweetX = toX(guidance.sweetPeakTime);
+  ctx.strokeStyle = "#9ae6b4";
+  ctx.setLineDash([2, 4]);
+  ctx.beginPath();
+  ctx.moveTo(sweetX, pad.t);
+  ctx.lineTo(sweetX, pad.t + ch);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = "#cde7ff";
+  ctx.font = "11px sans-serif";
+  ctx.fillText("Balanced zone", toX((guidance.balanced.start + guidance.balanced.end) / 2) - 34, pad.t + 14);
+  ctx.fillText("Sweetness plateau", sweetX + 4, pad.t + 28);
+  ctx.fillText("Bitterness rising", toX(guidance.late.start) + 4, pad.t + 42);
+}
+
+export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContext) {
+  const { xMode = "actual", guidance } = chartContext || {};
   const ctx = canvas.getContext("2d");
   const w = canvas.width;
   const h = canvas.height;
   clear(ctx, w, h);
 
-  const pad = { l: 54, r: 16, t: 24, b: 42 };
+  const pad = { l: 54, r: 20, t: 24, b: 42 };
   const cw = w - pad.l - pad.r;
   const ch = h - pad.t - pad.b;
+  const xMax = xMode === "actual" ? Math.max(timeline[timeline.length - 1]?.seconds || 1, 1) : 1;
+
+  if (guidance) drawGuidanceZones(ctx, pad, cw, ch, guidance, xMode === "actual" ? xMax : guidance.late.end, xMode);
 
   ctx.strokeStyle = "#213253";
   ctx.lineWidth = 1;
@@ -65,6 +122,15 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves) {
     ctx.beginPath();
     ctx.moveTo(pad.l, y);
     ctx.lineTo(w - pad.r, y);
+    ctx.stroke();
+  }
+
+  for (let i = 0; i <= 6; i++) {
+    const x = pad.l + (cw / 6) * i;
+    ctx.beginPath();
+    ctx.moveTo(x, pad.t);
+    ctx.lineTo(x, pad.t + ch);
+    ctx.strokeStyle = "rgba(33,50,83,0.45)";
     ctx.stroke();
   }
 
@@ -84,7 +150,7 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves) {
     ctx.setLineDash(seriesItem.family === "chemical" && mode === "overlay" ? [7, 5] : []);
     ctx.beginPath();
     timeline.forEach((point, index) => {
-      const x = pad.l + point.t * cw;
+      const x = pad.l + (xFromPoint(point, xMode) / xMax) * cw;
       const y = pad.t + (1 - (point[seriesItem.key] || 0) / 100) * ch;
       if (index === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
@@ -92,9 +158,11 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves) {
     ctx.stroke();
   }
 
+  if (guidance) drawMarkers(ctx, pad, cw, ch, guidance, xMode === "actual" ? xMax : guidance.late.end, xMode);
+
   ctx.setLineDash([]);
   ctx.fillStyle = "#9db3da";
-  ctx.fillText("Normalized brew progress", w / 2 - 60, h - 12);
+  ctx.fillText(xMode === "actual" ? "Extraction time (seconds)" : "Normalized extraction progress", w / 2 - 78, h - 12);
 }
 
 export function drawRadarChart(canvas, profile, options = {}) {
@@ -125,7 +193,7 @@ export function drawRadarChart(canvas, profile, options = {}) {
   for (let ring = 1; ring <= 5; ring++) {
     ctx.beginPath();
     for (let i = 0; i < keys.length; i++) {
-      const a = (-Math.PI / 2) + (i * Math.PI * 2) / keys.length;
+      const a = -Math.PI / 2 + (i * Math.PI * 2) / keys.length;
       const r = (radius / 5) * ring;
       const x = cx + Math.cos(a) * r;
       const y = cy + Math.sin(a) * r;
@@ -138,7 +206,7 @@ export function drawRadarChart(canvas, profile, options = {}) {
 
   ctx.strokeStyle = "#2e4d7c";
   keys.forEach((key, i) => {
-    const a = (-Math.PI / 2) + (i * Math.PI * 2) / keys.length;
+    const a = -Math.PI / 2 + (i * Math.PI * 2) / keys.length;
     const x = cx + Math.cos(a) * radius;
     const y = cy + Math.sin(a) * radius;
     ctx.beginPath();
@@ -154,7 +222,7 @@ export function drawRadarChart(canvas, profile, options = {}) {
 
   ctx.beginPath();
   keys.forEach((key, i) => {
-    const a = (-Math.PI / 2) + (i * Math.PI * 2) / keys.length;
+    const a = -Math.PI / 2 + (i * Math.PI * 2) / keys.length;
     const r = (profile[key] / 100) * radius;
     const x = cx + Math.cos(a) * r;
     const y = cy + Math.sin(a) * r;
