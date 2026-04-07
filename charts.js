@@ -97,16 +97,29 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves) {
   ctx.fillText("Normalized brew progress", w / 2 - 60, h - 12);
 }
 
-export function drawRadarChart(canvas, profile) {
+export function drawRadarChart(canvas, profile, options = {}) {
   const ctx = canvas.getContext("2d");
   const w = canvas.width;
   const h = canvas.height;
   clear(ctx, w, h);
 
   const keys = ["acidity", "sweetness", "bitterness", "body", "aroma", "clarity", "polyphenols", "roastiness", "floralFruit", "chocoNut"];
+  const compactLabels = {
+    acidity: "Acid",
+    sweetness: "Sweet",
+    bitterness: "Bitter",
+    body: "Body",
+    aroma: "Aroma",
+    clarity: "Clear",
+    polyphenols: "Poly",
+    roastiness: "Roast",
+    floralFruit: "Floral",
+    chocoNut: "Choco"
+  };
+  const compact = options.compact === true;
   const cx = w / 2;
-  const cy = h / 2 + 15;
-  const radius = Math.min(w, h) * 0.34;
+  const cy = h / 2;
+  const radius = Math.min(w, h) * (compact ? 0.35 : 0.34);
 
   ctx.strokeStyle = "#223a61";
   for (let ring = 1; ring <= 5; ring++) {
@@ -133,9 +146,10 @@ export function drawRadarChart(canvas, profile) {
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    ctx.fillStyle = "#cfe0ff";
-    ctx.font = "12px sans-serif";
-    ctx.fillText(key, cx + Math.cos(a) * (radius + 14) - 20, cy + Math.sin(a) * (radius + 14));
+    ctx.fillStyle = compact ? "#b7c8e6" : "#cfe0ff";
+    ctx.font = compact ? "10px sans-serif" : "12px sans-serif";
+    const label = compact ? compactLabels[key] : key;
+    ctx.fillText(label, cx + Math.cos(a) * (radius + 10) - 16, cy + Math.sin(a) * (radius + 10));
   });
 
   ctx.beginPath();
