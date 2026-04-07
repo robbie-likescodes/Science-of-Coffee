@@ -4,6 +4,8 @@ import { equationLibrary, filterEffects, modelSections } from "./model.js";
 const numberFormat = (v) => (Number.isInteger(v) ? String(v) : Number(v).toFixed(1));
 const celsiusToFahrenheit = (celsius) => (celsius * 9) / 5 + 32;
 const fahrenheitToCelsius = (fahrenheit) => ((fahrenheit - 32) * 5) / 9;
+const secondsToHours = (seconds) => seconds / 3600;
+const hoursToSeconds = (hours) => hours * 3600;
 
 export function initProcessSelector(selectEl, onChange) {
   if (!selectEl) {
@@ -41,9 +43,11 @@ export function renderMethodDescription(descriptionEl, processKey) {
 
 export function renderControls(container, state, processKey, onInput) {
   container.innerHTML = "";
+  const useHourContactTime = processKey === "coldBrew";
 
   controlConfig.forEach((cfg) => {
-    const { key, label } = cfg;
+    const { key } = cfg;
+    const label = useHourContactTime && key === "contactTime" ? "Contact Time (h)" : cfg.label;
     const spec = getControlSpec(processKey, key) || cfg;
     const wrapper = document.createElement("div");
     wrapper.className = "control";
@@ -55,7 +59,11 @@ export function renderControls(container, state, processKey, onInput) {
     title.textContent = label;
     const value = document.createElement("small");
     value.id = `value-${key}`;
-    value.textContent = key === "temperature" ? numberFormat(celsiusToFahrenheit(state[key])) : state[key];
+    value.textContent = key === "temperature"
+      ? numberFormat(celsiusToFahrenheit(state[key]))
+      : useHourContactTime && key === "contactTime"
+        ? numberFormat(secondsToHours(state[key]))
+        : state[key];
 
     head.append(title, value);
     wrapper.appendChild(head);
@@ -75,13 +83,14 @@ export function renderControls(container, state, processKey, onInput) {
       const input = document.createElement("input");
       input.type = "range";
       const isTemperature = key === "temperature";
-      input.min = String(isTemperature ? celsiusToFahrenheit(spec.min) : spec.min);
-      input.max = String(isTemperature ? celsiusToFahrenheit(spec.max) : spec.max);
-      input.step = String(spec.step);
-      input.value = String(isTemperature ? celsiusToFahrenheit(state[key]) : state[key]);
+      const isHourContactTime = useHourContactTime && key === "contactTime";
+      input.min = String(isTemperature ? celsiusToFahrenheit(spec.min) : isHourContactTime ? secondsToHours(spec.min) : spec.min);
+      input.max = String(isTemperature ? celsiusToFahrenheit(spec.max) : isHourContactTime ? secondsToHours(spec.max) : spec.max);
+      input.step = String(isHourContactTime ? secondsToHours(spec.step) : spec.step);
+      input.value = String(isTemperature ? celsiusToFahrenheit(state[key]) : isHourContactTime ? secondsToHours(state[key]) : state[key]);
       input.addEventListener("input", () => {
         const parsedDisplay = spec.step < 1 ? parseFloat(input.value) : parseInt(input.value, 10);
-        const parsed = isTemperature ? fahrenheitToCelsius(parsedDisplay) : parsedDisplay;
+        const parsed = isTemperature ? fahrenheitToCelsius(parsedDisplay) : isHourContactTime ? hoursToSeconds(parsedDisplay) : parsedDisplay;
         value.textContent = numberFormat(parsedDisplay);
         onInput(key, parsed, { anchorEl: wrapper, inputType: "range" });
       });
