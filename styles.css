@@ -288,3 +288,20 @@ canvas {
     right: 0.5rem;
   }
 }
+
+.interpretation-box {
+  margin-top: 0.35rem;
+  padding: 0.7rem;
+  border: 1px solid #2a426d;
+  border-radius: 8px;
+  background: #0d1a33;
+  color: #cfe0ff;
+  line-height: 1.4;
+}
+
+.interpretation-box ul { margin: 0.35rem 0 0; padding-left: 1rem; }
+.interpretation-box li { margin: 0.15rem 0; }
+
+.equations-content h3 { margin-top: 0.5rem; font-size: 1rem; }
+.equations-content ul { margin: 0.35rem 0 0.7rem; padding-left: 1.1rem; color: #cde1ff; }
+.equations-content li { margin: 0.2rem 0; }

@@ -10,7 +10,7 @@
     <header class="app-header panel">
       <div>
         <h1>Coffee Process & Extraction Characteristics Simulator</h1>
-        <p class="subtitle">Educational heuristic model for extraction behavior and flavor outcomes.</p>
+        <p class="subtitle">Educational heuristic model for extraction behavior and flavor outcomes (not a lab instrument).</p>
       </div>
       <label class="process-picker">
         <span>Brew Method</span>
@@ -28,7 +28,8 @@
 
       <section class="panel charts">
         <div class="chart-card">
-          <h2>Extraction Intensity Over Normalized Time</h2>
+          <h2>Extraction Teaching Graph</h2>
+          <div id="axisModeControls" class="mode-toggle" aria-label="X-axis mode toggle"></div>
           <div id="graphModeControls" class="mode-toggle" aria-label="Graph mode toggle"></div>
           <div id="curveControls" class="curve-controls" aria-label="Curve legend and visibility"></div>
           <canvas id="timeChart" width="980" height="380" aria-label="Time extraction chart"></canvas>
@@ -44,7 +45,13 @@
     <section class="panel summary" id="summaryPanel">
       <h2>Interpretation</h2>
       <p id="summaryText"></p>
+      <div id="interpretationBox" class="interpretation-box"></div>
       <div id="stats" class="stats-grid"></div>
+    </section>
+
+    <section class="panel summary" id="equationsPanel">
+      <h2>Equations / Model</h2>
+      <div id="equationsContent" class="equations-content"></div>
     </section>
 
     <script type="module" src="app.js"></script>
