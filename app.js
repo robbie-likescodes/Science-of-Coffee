@@ -4,9 +4,11 @@ import { GRAPH_MODES, drawRadarChart, drawTimeChart, getDefaultVisibleCurves, ge
 import {
   initGraphModeControls,
   initProcessSelector,
+  initViewTabs,
   renderControls,
   renderCurveControls,
   renderMethodDescription,
+  renderModelDocumentation,
   renderSummary
 } from "./ui.js";
 
@@ -19,10 +21,17 @@ const timeChart = document.getElementById("timeChart");
 const radarChart = document.getElementById("radarChart");
 const graphModeControls = document.getElementById("graphModeControls");
 const curveControls = document.getElementById("curveControls");
+const viewTabs = document.getElementById("viewTabs");
+const simulatorView = document.getElementById("simulatorView");
+const modelView = document.getElementById("modelView");
+const modelToc = document.getElementById("modelToc");
+const modelContent = document.getElementById("modelContent");
+const processPickerWrap = document.getElementById("processPickerWrap");
 
 const state = {
   process: "espresso",
   graphMode: "flavor",
+  view: "simulator",
   visibleCurves: getDefaultVisibleCurves("flavor"),
   params: { ...brewMethodPresets.espresso.defaults }
 };
@@ -40,6 +49,19 @@ function renderGraphControlState() {
     state.visibleCurves[key] = checked;
     rerender();
   });
+}
+
+function renderViewState() {
+  initViewTabs(viewTabs, state.view, (nextView) => {
+    state.view = nextView;
+    renderViewState();
+  });
+
+  const showSimulator = state.view === "simulator";
+  simulatorView.classList.toggle("hidden", !showSimulator);
+  modelView.classList.toggle("hidden", showSimulator);
+  processPickerWrap.classList.toggle("hidden", !showSimulator);
+  processDescription.classList.toggle("hidden", !showSimulator);
 }
 
 function rerender() {
@@ -62,4 +84,6 @@ function setProcess(processKey) {
 
 initProcessSelector(processSelect, setProcess);
 renderGraphControlState();
+renderModelDocumentation(modelToc, modelContent);
+renderViewState();
 setProcess(state.process);
