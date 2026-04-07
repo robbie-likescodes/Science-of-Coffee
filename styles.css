@@ -227,6 +227,58 @@ canvas {
   font-weight: 600;
 }
 
+.equation-popup {
+  position: fixed;
+  z-index: 40;
+  width: min(330px, calc(100vw - 16px));
+  pointer-events: none;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #345284;
+  background: rgba(7, 16, 32, 0.96);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+  transition: opacity 140ms ease, transform 180ms ease;
+}
+
+.equation-popup.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.equation-title {
+  font-size: 0.78rem;
+  color: #8cbcff;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.equation-expression {
+  margin-top: 0.22rem;
+  line-height: 1.35;
+  font-size: 0.79rem;
+  color: #e8f0ff;
+}
+
+.equation-change {
+  margin-top: 0.35rem;
+  color: #b8cbeb;
+  font-size: 0.78rem;
+}
+
+.equation-highlight {
+  color: #71e39e;
+  font-weight: 700;
+}
+
+.equation-effect {
+  margin-top: 0.3rem;
+  line-height: 1.35;
+  font-size: 0.78rem;
+  color: #cedcf7;
+}
+
 @media (max-width: 1040px) {
   .layout { grid-template-columns: 1fr; }
   .controls { max-height: none; }

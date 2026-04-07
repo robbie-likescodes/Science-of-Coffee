@@ -24,6 +24,7 @@ export function renderControls(container, state, onInput) {
     const [key, label, minOrOpts, max, step] = cfg;
     const wrapper = document.createElement("div");
     wrapper.className = "control";
+    wrapper.dataset.controlKey = key;
 
     const head = document.createElement("div");
     head.className = "control-head";
@@ -45,7 +46,7 @@ export function renderControls(container, state, onInput) {
         opt.textContent = optValue;
         select.appendChild(opt);
       });
-      select.addEventListener("change", () => onInput(key, select.value));
+      select.addEventListener("change", () => onInput(key, select.value, { anchorEl: wrapper, inputType: "select" }));
       wrapper.appendChild(select);
     } else {
       const input = document.createElement("input");
@@ -57,13 +58,46 @@ export function renderControls(container, state, onInput) {
       input.addEventListener("input", () => {
         const parsed = step < 1 ? parseFloat(input.value) : parseInt(input.value, 10);
         value.textContent = numberFormat(parsed);
-        onInput(key, parsed);
+        onInput(key, parsed, { anchorEl: wrapper, inputType: "range" });
       });
       wrapper.appendChild(input);
     }
 
     container.appendChild(wrapper);
   });
+}
+
+export function createEquationPopupManager() {
+  const popup = document.createElement("div");
+  popup.className = "equation-popup";
+  popup.setAttribute("aria-live", "polite");
+  document.body.appendChild(popup);
+
+  let hideTimer = null;
+
+  function hide() {
+    popup.classList.remove("visible");
+  }
+
+  function show(details) {
+    if (!details?.anchorEl) return;
+    const rect = details.anchorEl.getBoundingClientRect();
+    popup.innerHTML = `
+      <div class="equation-title">${details.title}</div>
+      <div class="equation-expression">${details.equation}</div>
+      <div class="equation-change">${details.variable}: <span class="equation-highlight">${details.before} → ${details.after}</span></div>
+      <div class="equation-effect">${details.effect}</div>
+    `;
+
+    popup.style.left = `${Math.min(rect.left + 8, window.innerWidth - 340)}px`;
+    popup.style.top = `${Math.max(rect.top - 12, 10)}px`;
+
+    popup.classList.add("visible");
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(hide, 1400);
+  }
+
+  return { show, hide };
 }
 
 export function initGraphModeControls(container, modes, currentMode, onModeChange) {
