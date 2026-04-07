@@ -1,4 +1,5 @@
 import { brewMethodPresets, controlConfig } from "./presets.js";
+import { equationLibrary, filterEffects, modelSections } from "./model.js";
 
 const numberFormat = (v) => (Number.isInteger(v) ? String(v) : Number(v).toFixed(1));
 
@@ -10,6 +11,21 @@ export function initProcessSelector(selectEl, onChange) {
     selectEl.appendChild(opt);
   });
   selectEl.addEventListener("change", () => onChange(selectEl.value));
+}
+
+export function initViewTabs(container, currentView, onChange) {
+  container.innerHTML = "";
+  [
+    { key: "simulator", label: "Simulator" },
+    { key: "model", label: "Equations / Model" }
+  ].forEach((tab) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `mode-btn ${tab.key === currentView ? "active" : ""}`;
+    btn.textContent = tab.label;
+    btn.addEventListener("click", () => onChange(tab.key));
+    container.appendChild(btn);
+  });
 }
 
 export function renderMethodDescription(descriptionEl, processKey) {

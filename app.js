@@ -5,10 +5,12 @@ import {
   createEquationPopupManager,
   initModeControls,
   initProcessSelector,
+  initViewTabs,
   renderControls,
   renderCurveControls,
   renderEquations,
   renderMethodDescription,
+  renderModelDocumentation,
   renderSummary
 } from "./ui.js";
 
@@ -21,11 +23,16 @@ const equationsContent = document.getElementById("equationsContent");
 const statsEl = document.getElementById("stats");
 const timeChart = document.getElementById("timeChart");
 const radarChart = document.getElementById("radarChart");
+const radarOverlay = document.getElementById("radarOverlay");
 const graphModeControls = document.getElementById("graphModeControls");
 const axisModeControls = document.getElementById("axisModeControls");
 const curveControls = document.getElementById("curveControls");
-const processPicker = document.querySelector(".process-picker");
-const popup = createEquationPopupManager();
+const viewTabs = document.getElementById("viewTabs");
+const simulatorView = document.getElementById("simulatorView");
+const modelView = document.getElementById("modelView");
+const modelToc = document.getElementById("modelToc");
+const modelContent = document.getElementById("modelContent");
+const processPickerWrap = document.getElementById("processPickerWrap");
 
 const state = {
   process: "espresso",
@@ -34,6 +41,56 @@ const state = {
   visibleCurves: getDefaultVisibleCurves("flavor"),
   params: { ...brewMethodPresets.espresso.defaults }
 };
+
+function syncRadarCanvasSize() {
+  const cssSize = Math.max(180, Math.floor(radarChart.clientWidth));
+  if (radarChart.width !== cssSize || radarChart.height !== cssSize) {
+    radarChart.width = cssSize;
+    radarChart.height = cssSize;
+  }
+}
+
+function initRadarOverlayInteractions() {
+  const dragHandle = radarOverlay.querySelector(".radar-overlay-title");
+  let dragging = false;
+  let pointerOffsetX = 0;
+  let pointerOffsetY = 0;
+
+  dragHandle.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    const bounds = radarOverlay.getBoundingClientRect();
+    pointerOffsetX = event.clientX - bounds.left;
+    pointerOffsetY = event.clientY - bounds.top;
+    radarOverlay.style.left = `${bounds.left}px`;
+    radarOverlay.style.top = `${bounds.top}px`;
+    radarOverlay.style.right = "auto";
+    dragHandle.setPointerCapture(event.pointerId);
+  });
+
+  dragHandle.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    const maxLeft = window.innerWidth - radarOverlay.offsetWidth;
+    const maxTop = window.innerHeight - radarOverlay.offsetHeight;
+    const nextLeft = Math.min(Math.max(0, event.clientX - pointerOffsetX), Math.max(0, maxLeft));
+    const nextTop = Math.min(Math.max(0, event.clientY - pointerOffsetY), Math.max(0, maxTop));
+    radarOverlay.style.left = `${nextLeft}px`;
+    radarOverlay.style.top = `${nextTop}px`;
+  });
+
+  const stopDragging = () => {
+    dragging = false;
+  };
+
+  dragHandle.addEventListener("pointerup", stopDragging);
+  dragHandle.addEventListener("pointercancel", stopDragging);
+
+  if (typeof ResizeObserver !== "undefined") {
+    const observer = new ResizeObserver(() => rerender());
+    observer.observe(radarOverlay);
+  } else {
+    window.addEventListener("resize", rerender);
+  }
+}
 
 function renderGraphControlState() {
   initModeControls(axisModeControls, X_AXIS_MODES, state.xMode, (nextMode) => {
@@ -53,6 +110,19 @@ function renderGraphControlState() {
     state.visibleCurves[key] = checked;
     rerender();
   });
+}
+
+function renderViewState() {
+  initViewTabs(viewTabs, state.view, (nextView) => {
+    state.view = nextView;
+    renderViewState();
+  });
+
+  const showSimulator = state.view === "simulator";
+  simulatorView.classList.toggle("hidden", !showSimulator);
+  modelView.classList.toggle("hidden", showSimulator);
+  processPickerWrap.classList.toggle("hidden", !showSimulator);
+  processDescription.classList.toggle("hidden", !showSimulator);
 }
 
 function rerender() {
@@ -125,4 +195,5 @@ function setProcess(processKey) {
 
 initProcessSelector(processSelect, setProcess);
 renderGraphControlState();
+initRadarOverlayInteractions();
 setProcess(state.process);
