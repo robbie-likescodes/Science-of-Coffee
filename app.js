@@ -34,8 +34,34 @@ const modelToc = document.getElementById("modelToc");
 const modelContent = document.getElementById("modelContent");
 const processPickerWrap = document.getElementById("processPickerWrap");
 
+const coreElements = {
+  processSelect,
+  processDescription,
+  controlsContainer,
+  summaryText,
+  interpretationBox,
+  equationsContent,
+  statsEl,
+  timeChart,
+  radarChart,
+  graphModeControls,
+  axisModeControls,
+  curveControls,
+  simulatorView,
+  processPickerWrap
+};
+
+const missingCoreElements = Object.entries(coreElements)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missingCoreElements.length) {
+  console.error("[coffee-sim] Missing required DOM elements:", missingCoreElements.join(", "));
+}
+
 const state = {
   process: "espresso",
+  view: "simulator",
   graphMode: "flavor",
   xMode: "actual",
   visibleCurves: getDefaultVisibleCurves("flavor"),
@@ -45,6 +71,7 @@ const state = {
 const popup = createEquationPopupManager();
 
 function renderGraphControlState() {
+  if (!axisModeControls || !graphModeControls || !curveControls) return;
   initModeControls(axisModeControls, X_AXIS_MODES, state.xMode, (nextMode) => {
     state.xMode = nextMode;
     rerender();
@@ -65,6 +92,7 @@ function renderGraphControlState() {
 }
 
 function renderViewState() {
+  if (!viewTabs || !simulatorView) return;
   initViewTabs(viewTabs, state.view, (nextView) => {
     state.view = nextView;
     renderViewState();
@@ -72,7 +100,7 @@ function renderViewState() {
 
   const showSimulator = state.view === "simulator";
   simulatorView.classList.toggle("hidden", !showSimulator);
-  modelView.classList.toggle("hidden", showSimulator);
+  if (modelView) modelView.classList.toggle("hidden", showSimulator);
   processPickerWrap.classList.toggle("hidden", !showSimulator);
   processDescription.classList.toggle("hidden", !showSimulator);
 }
@@ -84,8 +112,59 @@ function rerender() {
     guidance: result.guidance
   });
   drawRadarChart(radarChart, result.finalProfile, { compact: true });
-  renderSummary(summaryText, interpretationBox, statsEl, result.summary, result.finalProfile, result.interpretation);
-  renderEquations(equationsContent, result.equations);
+  if (summaryText && interpretationBox && statsEl) {
+    renderSummary(summaryText, interpretationBox, statsEl, result.summary, result.finalProfile, result.interpretation);
+  }
+  if (equationsContent && result.equations) {
+    renderEquations(equationsContent, result.equations);
+  }
+}
+
+function initRadarOverlayInteractions() {
+  if (!radarOverlay) return;
+  const title = radarOverlay.querySelector(".radar-overlay-title") || radarOverlay.querySelector("h2");
+  if (!title) return;
+
+  let dragging = false;
+  let startX = 0;
+  let startY = 0;
+  let baseLeft = 0;
+  let baseTop = 0;
+
+  const onMove = (event) => {
+    if (!dragging) return;
+    const nextLeft = Math.min(
+      Math.max(8, baseLeft + (event.clientX - startX)),
+      window.innerWidth - radarOverlay.offsetWidth - 8
+    );
+    const nextTop = Math.min(
+      Math.max(8, baseTop + (event.clientY - startY)),
+      window.innerHeight - radarOverlay.offsetHeight - 8
+    );
+    radarOverlay.style.left = `${nextLeft}px`;
+    radarOverlay.style.top = `${nextTop}px`;
+    radarOverlay.style.right = "auto";
+  };
+
+  const onUp = () => {
+    dragging = false;
+    title.classList.remove("dragging");
+    window.removeEventListener("pointermove", onMove);
+    window.removeEventListener("pointerup", onUp);
+  };
+
+  title.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    dragging = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    baseLeft = radarOverlay.offsetLeft;
+    baseTop = radarOverlay.offsetTop;
+    title.classList.add("dragging");
+    title.setPointerCapture(event.pointerId);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp, { once: true });
+  });
 }
 
 const sliderEquationMap = {
@@ -282,7 +361,13 @@ function setProcess(processKey) {
   rerender();
 }
 
-initProcessSelector(processSelect, setProcess);
-renderGraphControlState();
-initRadarOverlayInteractions();
-setProcess(state.process);
+if (missingCoreElements.length === 0) {
+  initProcessSelector(processSelect, setProcess);
+  renderGraphControlState();
+  if (viewTabs && modelView) {
+    renderViewState();
+    if (modelToc && modelContent) renderModelDocumentation(modelToc, modelContent);
+  }
+  initRadarOverlayInteractions();
+  setProcess(state.process);
+}
