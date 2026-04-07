@@ -11,8 +11,10 @@ import {
   renderEquations,
   renderMethodDescription,
   renderModelDocumentation,
+  renderVariableDocumentation,
   renderSummary
 } from "./ui.js";
+import { variableDocs } from "./variableDocs.js";
 
 const processSelect = document.getElementById("processSelect");
 const processDescription = document.getElementById("processDescription");
@@ -34,6 +36,8 @@ const modelView = document.getElementById("modelView");
 const modelToc = document.getElementById("modelToc");
 const modelContent = document.getElementById("modelContent");
 const processPickerWrap = document.getElementById("processPickerWrap");
+const variableView = document.getElementById("variableView");
+const variableContent = document.getElementById("variableContent");
 
 const coreElements = {
   processSelect,
@@ -49,7 +53,9 @@ const coreElements = {
   axisModeControls,
   curveControls,
   simulatorView,
-  processPickerWrap
+  processPickerWrap,
+  variableView,
+  variableContent
 };
 
 const missingCoreElements = Object.entries(coreElements)
@@ -95,15 +101,18 @@ function renderGraphControlState() {
 function renderViewState() {
   if (!viewTabs || !simulatorView) return;
   initViewTabs(viewTabs, state.view, (nextView) => {
-    state.view = nextView;
-    renderViewState();
+    window.location.hash = nextView === "model" ? "#model" : "#simulator";
   });
 
   const showSimulator = state.view === "simulator";
+  const showModel = state.view === "model";
+  const showVariable = state.view === "variable";
   simulatorView.classList.toggle("hidden", !showSimulator);
-  if (modelView) modelView.classList.toggle("hidden", showSimulator);
+  if (modelView) modelView.classList.toggle("hidden", !showModel);
+  if (variableView) variableView.classList.toggle("hidden", !showVariable);
   processPickerWrap.classList.toggle("hidden", !showSimulator);
   processDescription.classList.toggle("hidden", !showSimulator);
+  if (radarOverlay) radarOverlay.classList.toggle("hidden", !showSimulator);
 }
 
 function rerender() {
@@ -355,13 +364,79 @@ function setProcess(processKey) {
   emitProcessPopup(processKey, previousProcess);
 }
 
+function applyMethodDefaults(processKey) {
+  const defaults = brewMethodPresets[processKey]?.defaults;
+  if (!defaults || !controlsContainer) return;
+  state.params = { ...defaults };
+  processSelect.value = processKey;
+
+  renderControls(
+    controlsContainer,
+    state.params,
+    processKey,
+    (key, value, details = {}) => {
+      const previousParams = { ...state.params };
+      state.params[key] = clampValueForControl(state.process, key, value);
+      emitEquationPopup(key, previousParams, state.params, details.anchorEl);
+      rerender();
+    },
+    (key) => {
+      window.location.hash = `#variable/${key}`;
+    }
+  );
+
+  if (resetControlsButton) {
+    resetControlsButton.onclick = () => applyMethodDefaults(state.process);
+  }
+
+  rerender();
+}
+
+function renderVariableView(variableKey) {
+  if (!variableContent) return;
+  const doc = variableDocs[variableKey];
+  if (!doc) {
+    state.view = "simulator";
+    renderViewState();
+    return;
+  }
+  const processLabel = brewMethodPresets[state.process]?.label || state.process;
+  renderVariableDocumentation(variableContent, doc, processLabel, () => {
+    window.location.hash = "#simulator";
+  });
+}
+
+function applyRouteFromHash() {
+  const hash = window.location.hash.replace(/^#/, "");
+  if (!hash || hash === "simulator") {
+    state.view = "simulator";
+    renderViewState();
+    return;
+  }
+  if (hash === "model") {
+    state.view = "model";
+    renderViewState();
+    return;
+  }
+  if (hash.startsWith("variable/")) {
+    state.view = "variable";
+    renderViewState();
+    renderVariableView(hash.split("/")[1]);
+    return;
+  }
+  state.view = "simulator";
+  renderViewState();
+}
+
 if (missingCoreElements.length === 0) {
   initProcessSelector(processSelect, setProcess);
   renderGraphControlState();
   if (viewTabs && modelView) {
-    renderViewState();
     if (modelToc && modelContent) renderModelDocumentation(modelToc, modelContent);
   }
   initRadarOverlayInteractions();
   setProcess(state.process);
+  window.addEventListener("hashchange", applyRouteFromHash);
+  if (!window.location.hash) window.location.hash = "#simulator";
+  applyRouteFromHash();
 }
