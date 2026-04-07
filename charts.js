@@ -54,6 +54,12 @@ function xFromPoint(point, xMode) {
 }
 
 function formatSecondsLabel(seconds) {
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.round((seconds % 3600) / 60);
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
+  }
   if (seconds < 60) return `${Math.round(seconds)}s`;
   const mins = Math.floor(seconds / 60);
   const secs = Math.round(seconds % 60);
@@ -179,7 +185,7 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContex
 
   ctx.setLineDash([]);
   ctx.fillStyle = "#9db3da";
-  ctx.fillText(xMode === "actual" ? "Extraction time (seconds)" : "Normalized extraction progress", w / 2 - 78, h - 12);
+  ctx.fillText(xMode === "actual" ? "Extraction time" : "Normalized extraction progress", w / 2 - 56, h - 12);
 }
 
 export function drawRadarChart(canvas, profile, options = {}) {
