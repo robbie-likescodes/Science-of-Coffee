@@ -4,7 +4,7 @@ const commonControlConfig = {
   grindSize: { label: "Grind Size", type: "range", min: 0, max: 100, step: 1 },
   fines: { label: "Fines Amount", type: "range", min: 0, max: 100, step: 1 },
   roastLevel: { label: "Roast Level", type: "range", min: 0, max: 100, step: 1 },
-  temperature: { label: "Water Temperature (°C)", type: "range", min: 20, max: 100, step: 1 },
+  temperature: { label: "Water Temperature (°F)", type: "range", min: 20, max: 100, step: 1 },
   contactTime: { label: "Contact Time (s)", type: "range", min: 20, max: 1200, step: 5 },
   pressure: { label: "Pressure (bar)", type: "range", min: 1, max: 12, step: 0.1 },
   pressureAggressiveness: { label: "Pressure Profile Aggressiveness", type: "range", min: 0, max: 100, step: 1 },
