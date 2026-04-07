@@ -1,14 +1,27 @@
-const COLORS = {
-  acidity: "#4cc9f0",
-  sweetness: "#7ff59b",
-  bitterness: "#f4a261",
-  body: "#e9c46a",
-  polyphenols: "#ef476f",
-  aroma: "#c77dff",
-  clarity: "#90e0ef",
-  roastiness: "#ff9f1c",
-  floralFruit: "#73fbd3",
-  chocoNut: "#c08552"
+export const GRAPH_MODES = {
+  flavor: "Flavor Characteristics",
+  chemical: "Chemical Characteristics",
+  overlay: "Overlay"
+};
+
+const SERIES = {
+  flavor: [
+    { key: "sweetness", label: "Sweetness", color: "#7ff59b", family: "flavor" },
+    { key: "acidity", label: "Sourness / Acidity", color: "#4cc9f0", family: "flavor" },
+    { key: "bitterness", label: "Bitterness", color: "#f4a261", family: "flavor" },
+    { key: "burnt", label: "Burnt / Roast", color: "#ff7b54", family: "flavor" },
+    { key: "body", label: "Body", color: "#e9c46a", family: "flavor" },
+    { key: "astringency", label: "Astringency", color: "#ef476f", family: "flavor" }
+  ],
+  chemical: [
+    { key: "organicAcids", label: "Organic Acids", color: "#5ec8ff", family: "chemical" },
+    { key: "sugars", label: "Sucrose / Sugars", color: "#93f57b", family: "chemical" },
+    { key: "polyphenols", label: "Polyphenols", color: "#ff4d6d", family: "chemical" },
+    { key: "maillard", label: "Maillard / Caramelized", color: "#ffb703", family: "chemical" },
+    { key: "melanoidins", label: "Melanoidins", color: "#d48a39", family: "chemical" },
+    { key: "lipids", label: "Lipids / Oils", color: "#cdb4db", family: "chemical" },
+    { key: "aromatics", label: "Aromatic Compounds", color: "#9d4edd", family: "chemical" }
+  ]
 };
 
 function clear(ctx, w, h) {
@@ -17,7 +30,25 @@ function clear(ctx, w, h) {
   ctx.fillRect(0, 0, w, h);
 }
 
-export function drawTimeChart(canvas, timeline) {
+export function getSeriesForMode(mode) {
+  if (mode === "overlay") return [...SERIES.flavor, ...SERIES.chemical];
+  return SERIES[mode] || SERIES.flavor;
+}
+
+export function getDefaultVisibleCurves(mode) {
+  const visible = {};
+  const all = getSeriesForMode(mode);
+  all.forEach((s, i) => {
+    if (mode !== "overlay") {
+      visible[s.key] = true;
+    } else {
+      visible[s.key] = i < 8 || ["sweetness", "acidity", "bitterness", "body", "polyphenols"].includes(s.key);
+    }
+  });
+  return visible;
+}
+
+export function drawTimeChart(canvas, timeline, mode, visibleCurves) {
   const ctx = canvas.getContext("2d");
   const w = canvas.width;
   const h = canvas.height;
@@ -45,32 +76,25 @@ export function drawTimeChart(canvas, timeline) {
     ctx.fillText(`${value}`, 10, y + 4);
   }
 
-  const seriesKeys = ["acidity", "sweetness", "bitterness", "body", "polyphenols"];
-  for (const key of seriesKeys) {
-    ctx.strokeStyle = COLORS[key];
-    ctx.lineWidth = 2.2;
+  const series = getSeriesForMode(mode).filter((s) => visibleCurves[s.key] !== false);
+
+  for (const seriesItem of series) {
+    ctx.strokeStyle = seriesItem.color;
+    ctx.lineWidth = 2.15;
+    ctx.setLineDash(seriesItem.family === "chemical" && mode === "overlay" ? [7, 5] : []);
     ctx.beginPath();
     timeline.forEach((point, index) => {
       const x = pad.l + point.t * cw;
-      const y = pad.t + (1 - point[key] / 100) * ch;
+      const y = pad.t + (1 - (point[seriesItem.key] || 0) / 100) * ch;
       if (index === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
     ctx.stroke();
   }
 
+  ctx.setLineDash([]);
   ctx.fillStyle = "#9db3da";
   ctx.fillText("Normalized brew progress", w / 2 - 60, h - 12);
-
-  let lx = pad.l;
-  const ly = 10;
-  for (const key of seriesKeys) {
-    ctx.fillStyle = COLORS[key];
-    ctx.fillRect(lx, ly, 10, 10);
-    ctx.fillStyle = "#dbe7ff";
-    ctx.fillText(key, lx + 14, ly + 9);
-    lx += 120;
-  }
 }
 
 export function drawRadarChart(canvas, profile) {

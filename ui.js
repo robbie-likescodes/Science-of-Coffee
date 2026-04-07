@@ -61,6 +61,42 @@ export function renderControls(container, state, onInput) {
   });
 }
 
+export function initGraphModeControls(container, modes, currentMode, onModeChange) {
+  container.innerHTML = "";
+  Object.entries(modes).forEach(([key, label]) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `mode-btn ${key === currentMode ? "active" : ""}`;
+    btn.dataset.mode = key;
+    btn.textContent = label;
+    btn.addEventListener("click", () => onModeChange(key));
+    container.appendChild(btn);
+  });
+}
+
+export function renderCurveControls(container, series, visibleCurves, onToggle) {
+  container.innerHTML = "";
+  series.forEach((s) => {
+    const label = document.createElement("label");
+    label.className = "curve-chip";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = visibleCurves[s.key] !== false;
+    cb.addEventListener("change", () => onToggle(s.key, cb.checked));
+
+    const swatch = document.createElement("span");
+    swatch.className = `swatch ${s.family}`;
+    swatch.style.setProperty("--swatch", s.color);
+
+    const text = document.createElement("span");
+    text.textContent = s.label;
+
+    label.append(cb, swatch, text);
+    container.appendChild(label);
+  });
+}
+
 export function renderSummary(summaryEl, statsEl, text, profile) {
   summaryEl.textContent = text;
   statsEl.innerHTML = "";

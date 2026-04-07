@@ -14,9 +14,9 @@ const characteristics = [
 ];
 
 const filterEffects = {
-  paper: { body: -12, clarity: 14, polyphenols: -14, aroma: 2 },
-  cloth: { body: -4, clarity: 8, polyphenols: -6, aroma: 4 },
-  metal: { body: 12, clarity: -8, polyphenols: 10, aroma: 0 }
+  paper: { body: -12, clarity: 14, polyphenols: -14, aroma: 2, lipids: -16 },
+  cloth: { body: -4, clarity: 8, polyphenols: -6, aroma: 4, lipids: -6 },
+  metal: { body: 12, clarity: -8, polyphenols: 10, aroma: 0, lipids: 10 }
 };
 
 const clamp = (x, min = 0, max = 100) => Math.max(min, Math.min(max, x));
@@ -34,14 +34,10 @@ function lateRise(t, start = 0.55, power = 2.2) {
 
 /**
  * Heuristic extraction model notes:
- * - The model is intentionally educational and not chemistry-accurate.
- * - Compounds are represented as families with different extraction timing:
- *   early bright acids/aromatics, mid sweetness/body, late bitterness/polyphenols.
- * - Global extraction speed is influenced by grind, fines, temperature, agitation,
- *   pressure, and method-specific coefficient.
- * - Uneven puck/bed prep (low uniformity + high channeling) adds harshness:
- *   higher late bitterness/polyphenols and reduced sweetness clarity.
- * - Filter media applies post-extraction sensory shaping to cup profile.
+ * - "Chemical" curves are extraction-family proxies over normalized time.
+ * - "Flavor" curves are NOT direct copies; they are derived from chemical families
+ *   plus recipe/process factors (roast, concentration, fines, unevenness, etc.)
+ *   to create believable sensory outcomes.
  */
 export function runSimulation(processKey, params) {
   const method = processPresets[processKey];
@@ -74,46 +70,52 @@ export function runSimulation(processKey, params) {
     const t = i / points;
     const tt = clamp(t * extractionSpeed, 0, 1.2);
 
-    const acidity =
-      70 * sigmoid(tt, 0.16, 11) * (1 - 0.38 * lateRise(tt, 0.48, 1.6)) * (1 - 0.22 * buffering) * (1 + 0.16 * minerals);
+    // Chemical families (extraction-side)
+    const organicAcids =
+      78 * sigmoid(tt, 0.14, 11) * (1 - 0.35 * lateRise(tt, 0.5, 1.6)) * (1 - 0.2 * buffering) * (1 + 0.14 * minerals);
 
-    const sweetness =
-      68 * sigmoid(tt, 0.33, 9) * (1 - 0.38 * lateRise(tt, 0.68, 2.4)) * (1 + 0.2 * extractionEff) * (1 - 0.3 * unevenness);
-
-    const bitterness =
-      24 * sigmoid(tt, 0.42, 7) +
-      55 * lateRise(tt, 0.58, 2.1) * (1 + 0.45 * roast + 0.34 * unevenness) * c.bitterness;
-
-    const body =
-      42 * sigmoid(tt, 0.34, 7) * (1 + 0.34 * fines + 0.36 * concentration + 0.25 * bodyBias) * c.body;
+    const sugars =
+      74 * sigmoid(tt, 0.3, 8.5) * (1 - 0.28 * lateRise(tt, 0.72, 2.6)) * (1 + 0.2 * extractionEff) * (1 - 0.26 * unevenness);
 
     const polyphenols =
-      14 * sigmoid(tt, 0.46, 6) +
-      60 * lateRise(tt, 0.63, 2.4) * (1 + 0.56 * fines + 0.38 * unevenness + 0.1 * concentration);
+      12 * sigmoid(tt, 0.48, 6) +
+      62 * lateRise(tt, 0.62, 2.35) * (1 + 0.58 * fines + 0.42 * unevenness + 0.12 * concentration);
 
-    const aroma =
-      52 * sigmoid(tt, 0.2, 10) * (1 - 0.25 * lateRise(tt, 0.72, 2.0)) * (1 + 0.18 * agitation + 0.18 * c.aroma);
+    const maillard =
+      (22 + 62 * roast) * sigmoid(tt, 0.36, 7.5) * (1 + 0.1 * concentration) * (0.88 + 0.12 * extractionEff);
 
-    const clarity =
-      46 * sigmoid(tt, 0.27, 9) * (1 + 0.32 * clarityBias + 0.18 * c.clarity) * (1 - 0.22 * fines) * (1 - 0.28 * unevenness);
+    const melanoidins =
+      (12 + 58 * roast) * sigmoid(tt, 0.52, 6.4) * (1 + 0.34 * fines + 0.25 * concentration) * c.body;
 
-    const roastiness = 24 + 62 * roast * (0.52 + 0.48 * sigmoid(tt, 0.5, 7));
+    const lipids =
+      30 * sigmoid(tt, 0.34, 7) * (1 + 0.55 * fines + 0.34 * concentration + 0.25 * bodyBias) * (0.9 + 0.2 * c.body);
 
-    const floralFruit = acidity * (0.72 + 0.18 * clarityBias) * (1 - 0.38 * roast);
-    const chocoNut = (0.62 * body + 0.45 * roastiness + 0.25 * sweetness) * (0.7 + 0.3 * roast);
+    const aromatics =
+      58 * sigmoid(tt, 0.19, 10) * (1 - 0.2 * lateRise(tt, 0.76, 2.1)) * (1 + 0.16 * agitation + 0.12 * c.aroma);
+
+    // Flavor families (sensory-side), derived from chemical curves + process factors.
+    const acidity = organicAcids * (0.82 + 0.16 * clarityBias) * (1 - 0.12 * roast);
+    const sweetness = (0.62 * sugars + 0.3 * maillard) * (0.9 + 0.1 * extractionEff) * (1 - 0.12 * unevenness);
+    const bitterness = (0.62 * polyphenols + 0.28 * maillard + 0.2 * melanoidins) * (0.88 + 0.22 * roast);
+    const burnt = (0.44 * maillard + 0.46 * melanoidins + 28 * lateRise(tt, 0.7, 2.2)) * (0.75 + 0.35 * roast);
+    const body = (0.64 * lipids + 0.24 * melanoidins + 10 * concentration) * (0.86 + 0.2 * bodyBias);
+    const astringency = (0.76 * polyphenols + 16 * lateRise(tt, 0.66, 2.4)) * (0.86 + 0.24 * unevenness);
 
     timeline.push({
       t,
+      organicAcids: clamp(organicAcids),
+      sugars: clamp(sugars),
+      polyphenols: clamp(polyphenols),
+      maillard: clamp(maillard),
+      melanoidins: clamp(melanoidins),
+      lipids: clamp(lipids),
+      aromatics: clamp(aromatics),
       acidity: clamp(acidity),
       sweetness: clamp(sweetness),
       bitterness: clamp(bitterness),
+      burnt: clamp(burnt),
       body: clamp(body),
-      aroma: clamp(aroma),
-      clarity: clamp(clarity),
-      polyphenols: clamp(polyphenols),
-      roastiness: clamp(roastiness),
-      floralFruit: clamp(floralFruit),
-      chocoNut: clamp(chocoNut)
+      astringency: clamp(astringency)
     });
   }
 
@@ -122,33 +124,47 @@ export function runSimulation(processKey, params) {
   const fe = filterEffects[params.filterType] || filterEffects.paper;
 
   adjusted.body = clamp(adjusted.body + fe.body);
-  adjusted.clarity = clamp(adjusted.clarity + fe.clarity);
   adjusted.polyphenols = clamp(adjusted.polyphenols + fe.polyphenols);
-  adjusted.aroma = clamp(adjusted.aroma + fe.aroma);
+  adjusted.aromatics = clamp(adjusted.aromatics + fe.aroma);
+  adjusted.lipids = clamp(adjusted.lipids + fe.lipids);
 
-  adjusted.acidity = clamp(adjusted.acidity * (1 - 0.2 * buffering) * (0.94 + 0.12 * minerals));
-  adjusted.sweetness = clamp(adjusted.sweetness * (0.9 + 0.25 * extractionEff) * (1 - 0.2 * unevenness));
-  adjusted.bitterness = clamp(adjusted.bitterness * (1 + 0.28 * unevenness + 0.11 * pressureFactor));
+  adjusted.acidity = clamp(adjusted.acidity * (0.94 + 0.12 * minerals));
+  adjusted.sweetness = clamp(adjusted.sweetness * (0.92 + 0.2 * extractionEff));
+  adjusted.bitterness = clamp(adjusted.bitterness * (1 + 0.22 * unevenness + 0.08 * pressureFactor));
+  adjusted.astringency = clamp(adjusted.astringency * (1 + 0.22 * unevenness));
 
-  const summary = buildSummary(processKey, adjusted);
+  const finalProfile = {
+    acidity: adjusted.acidity,
+    sweetness: adjusted.sweetness,
+    bitterness: adjusted.bitterness,
+    body: adjusted.body,
+    aroma: adjusted.aromatics,
+    clarity: clamp(56 + 0.34 * adjusted.acidity - 0.28 * adjusted.body - 0.2 * adjusted.polyphenols + 18 * clarityBias),
+    polyphenols: adjusted.polyphenols,
+    roastiness: clamp(adjusted.burnt * 0.78 + adjusted.maillard * 0.24),
+    floralFruit: clamp(adjusted.acidity * 0.74 + adjusted.aromatics * 0.22 - adjusted.burnt * 0.2),
+    chocoNut: clamp(adjusted.sweetness * 0.28 + adjusted.body * 0.4 + adjusted.maillard * 0.42)
+  };
+
+  const summary = buildSummary(processKey, finalProfile, adjusted);
 
   return {
     timeline,
     finalProfile: characteristics.reduce((acc, key) => {
-      acc[key] = clamp(adjusted[key]);
+      acc[key] = clamp(finalProfile[key]);
       return acc;
     }, {}),
     summary
   };
 }
 
-function buildSummary(processKey, p) {
+function buildSummary(processKey, p, adjusted) {
   const tags = [];
   const name = processPresets[processKey].label;
 
   if (p.acidity > 62 && p.clarity > 58) tags.push("brightness and clarity");
   if (p.body > 65) tags.push("body-forward texture");
-  if (p.bitterness > 62 || p.polyphenols > 60) tags.push("late-extraction harshness");
+  if (p.bitterness > 62 || p.polyphenols > 60 || adjusted.astringency > 58) tags.push("late-extraction harshness");
   if (p.sweetness > 60 && p.bitterness < 50) tags.push("rounded sweetness");
   if (p.aroma > 60) tags.push("expressive aroma");
 
