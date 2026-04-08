@@ -13,13 +13,13 @@ const METHOD_DYNAMICS = {
 const CONTROL_META = {
   dose: {
     title: "Concentration term",
-    equation: "concentration = clamp((dose / brewRatio) / 2.2, 0.35, 3.2)",
+    equation: "concentration = clamp((dose / brewRatio) / 2.4, 0.35, 2.8)",
     variable: "concentrationFactor",
     effect: "Higher dose raises concentration and body while increasing late harshness risk."
   },
   brewRatio: {
     title: "Concentration term",
-    equation: "concentration = clamp((dose / brewRatio) / 2.2, 0.35, 3.2)",
+    equation: "concentration = clamp((dose / brewRatio) / 2.4, 0.35, 2.8)",
     variable: "concentrationFactor",
     effect: "Higher brew ratio lowers concentration and generally softens body/harshness."
   },
@@ -31,9 +31,9 @@ const CONTROL_META = {
   },
   temperature: {
     title: "Temperature kinetics",
-    equation: "tempRate = clamp(exp(0.028×(T-93)), 0.16, 1.65)",
+    equation: "tempRate = clamp(exp(0.03×(T-93)), 0.2, 1.75), viscosityFactor = clamp(exp(-0.02×(T-93)), 0.7, 1.35)",
     variable: "tempFactor",
-    effect: "Higher temperature speeds extraction and increases late-stage risk."
+    effect: "Higher temperature speeds diffusion and lowers viscosity, increasing extraction flow while also raising late-stage risk."
   },
   pressure: {
     title: "Method-weighted pressure",
@@ -43,7 +43,7 @@ const CONTROL_META = {
   },
   contactTime: {
     title: "Contact-time progression",
-    equation: "contactFactor = clamp(0.72 + 0.62×sqrt(contactNorm), 0.35, 1.8)",
+    equation: "contactFactor = clamp(0.55 + 0.45×sqrt(contactNorm), 0.4, 1.55)",
     variable: "contactFactor",
     effect: "Longer contact moves extraction further into late compounds."
   },
@@ -97,14 +97,14 @@ export function runSimulation(processKey, params) {
 
     const maillard =
       (16 + 66 * m.roast) *
-      sigmoid(tt, 0.34, 8.4) *
+      sigmoid(tt, 0.38, 8.1) *
       (1 + 0.11 * m.concentration + 0.08 * m.tempSweetBoost) *
       (0.86 + 0.16 * m.extractionEff);
 
     const melanoidins =
       (10 + 62 * m.roast) *
-      sigmoid(tt, 0.5, 6.8) *
-      (1 + 0.32 * m.fines + 0.22 * m.concentration + 0.12 * m.tempLateRisk) *
+      sigmoid(tt, 0.54, 6.6) *
+      (1 + 0.34 * m.fines + 0.22 * m.concentration + 0.14 * m.tempLateRisk) *
       m.c.body;
 
     const lipids =
@@ -115,7 +115,7 @@ export function runSimulation(processKey, params) {
 
     const aromatics =
       56 *
-      sigmoid(tt, 0.2, 10) *
+      sigmoid(tt, 0.24, 9.8) *
       (1 - 0.24 * lateRise(tt, 0.74, 2)) *
       (1 + 0.14 * m.agitation + 0.12 * m.c.aroma) *
       (0.94 + 0.12 * m.tempAroma);
@@ -130,10 +130,10 @@ export function runSimulation(processKey, params) {
       concentration: m.concentration,
       pressureHarshness: m.pressureHarshness
     });
-    const burnt = (0.36 * maillard + 0.48 * melanoidins + 24 * lateRise(tt, 0.7, 2.1)) * (0.72 + 0.46 * m.roast);
+    const burnt = (0.34 * maillard + 0.5 * melanoidins + 28 * lateRise(tt, 0.72, 2.2)) * (0.7 + 0.5 * m.roast);
     const body = (0.62 * lipids + 0.26 * melanoidins + 11 * m.concentration) * (0.84 + 0.24 * m.bodyBias);
     const astringency =
-      (0.72 * polyphenols + 18 * lateRise(tt, 0.64, 2.4) * (1 + 0.35 * m.tempLateRisk + 0.3 * m.finesMigrationRisk)) *
+      (0.74 * polyphenols + 20 * lateRise(tt, 0.67, 2.45) * (1 + 0.38 * m.tempLateRisk + 0.34 * m.finesMigrationRisk)) *
       (0.84 + 0.28 * m.unevenness);
 
     timeline.push({
@@ -212,30 +212,33 @@ function deriveModel(processKey, params) {
   const pressureRaw = Math.max(0, params.pressure - 1) / 9;
   const pressureFactor = clamp(pressureRaw, 0, 1.6);
   const extractionEff = clamp((params.extractionEfficiency - 40) / 55, 0, 1.1);
-  const concentration = clamp((params.dose / params.brewRatio) / 2.2, 0.35, 3.2);
+  const concentration = clamp((params.dose / params.brewRatio) / 2.4, 0.35, 2.8);
   const unevenness = clamp((1 - s(params.bedUniformity)) * 0.5 + s(params.channelingRisk) * 0.78, 0, 1.5);
   const preinfusionRatio = clamp(params.preinfusion / Math.max(params.contactTime, 1), 0, 0.65);
   const tempC = params.temperature;
-  const tempRate = clamp(Math.exp(0.028 * (tempC - 93)), 0.16, 1.65);
+  const tempRate = clamp(Math.exp(0.03 * (tempC - 93)), 0.2, 1.75);
+  const viscosityFactor = clamp(Math.exp(-0.02 * (tempC - 93)), 0.7, 1.35);
   const tempSweetBoost = clamp((tempC - 88) / 10, 0, 1.2);
   const tempLateRisk = clamp((tempC - 92) / 8, 0, 1.7);
   const tempAcidShift = clamp((90 - tempC) / 14, -0.55, 1.2);
   const tempAroma = clamp((tempC - 80) / 16, 0.2, 1.3);
   const contactNorm = params.contactTime / Math.max(method.defaults.contactTime, 1);
-  const contactFactor = clamp(0.72 + 0.62 * Math.sqrt(contactNorm), 0.35, 1.8);
+  const contactFactor = clamp(0.55 + 0.45 * Math.sqrt(contactNorm), 0.4, 1.55);
   const roastSolubility = 0.86 + 0.34 * roast;
 
-  const flowResistance = clamp(0.3 + 0.56 * grindFine + 0.52 * fines + 0.18 * unevenness, 0.12, 1.8);
-  const pressureUseful = pressureFactor * dynamics.pressure * clamp(1.18 - 0.5 * flowResistance, 0.35, 1.1);
+  const flowResistance = clamp((0.24 + 0.64 * grindFine + 0.58 * fines + 0.26 * unevenness) * viscosityFactor, 0.1, 2.1);
+  const permeability = clamp(1.2 - 0.44 * flowResistance, 0.2, 1.08);
+  const pressureUseful = pressureFactor * dynamics.pressure * permeability;
   const pressureAgg = s(params.pressureAggressiveness);
   const pressureHarshness = clamp(
-    Math.max(0, pressureUseful - 0.68) * (0.66 + 0.6 * unevenness + 0.3 * pressureAgg) + Math.max(0, flowResistance - 1.08) * 0.5 * dynamics.pressure,
+    Math.max(0, pressureUseful - 0.62) * (0.62 + 0.75 * unevenness + 0.34 * pressureAgg) +
+      Math.max(0, flowResistance - 1.05) * 0.62 * dynamics.pressure,
     0,
     1.5
   );
 
   const agitationEffect = agitation * (0.42 + 0.72 * dynamics.agitation);
-  const finesMigrationRisk = clamp(agitation * fines * dynamics.immersion * 1.05 + pressureAgg * 0.25 * dynamics.pressure, 0, 1.45);
+  const finesMigrationRisk = clamp(agitation * fines * dynamics.immersion * 1.05 + pressureAgg * 0.28 * dynamics.pressure, 0, 1.45);
 
   const extractionSpeed = equationLibrary.extractionSpeed.compute({
     c,
@@ -278,15 +281,20 @@ function deriveModel(processKey, params) {
 }
 
 function computeGuidance(timeline, contactTime) {
-  const scores = timeline.map((p) => 0.36 * p.sweetness + 0.24 * p.acidity + 0.16 * p.aromatics - 0.24 * p.bitterness - 0.2 * p.astringency - 0.12 * p.burnt);
+  const minFraction = contactTime <= 60 ? 0.78 : contactTime <= 240 ? 0.28 : 0.12;
+  const minIndex = Math.floor((timeline.length - 1) * minFraction);
+  const scores = timeline.map((p, idx) => {
+    const underExtractionPenalty = idx < minIndex ? (minIndex - idx) * 0.9 : 0;
+    return 0.42 * p.sweetness + 0.18 * p.acidity + 0.14 * p.aromatics - 0.26 * p.bitterness - 0.26 * p.astringency - 0.14 * p.burnt - underExtractionPenalty;
+  });
   const peakScore = Math.max(...scores);
   const peakIndex = scores.indexOf(peakScore);
 
-  let startIndex = Math.max(0, peakIndex - 8);
+  let startIndex = Math.max(minIndex, peakIndex - 8);
   let endIndex = Math.min(timeline.length - 1, peakIndex + 8);
 
   for (let i = peakIndex; i >= 0; i--) {
-    if (scores[i] < peakScore * 0.95) {
+    if (scores[i] < peakScore * 0.95 && i >= minIndex) {
       startIndex = i;
       break;
     }
@@ -300,10 +308,23 @@ function computeGuidance(timeline, contactTime) {
     }
   }
 
+  if (startIndex > endIndex) {
+    const mid = Math.round((startIndex + endIndex) / 2);
+    startIndex = Math.max(minIndex, mid - 3);
+    endIndex = Math.max(startIndex + 2, Math.min(timeline.length - 1, mid + 3));
+  }
+
+  const minWindowIdx = Math.max(2, Math.round((timeline.length - 1) * (contactTime <= 60 ? 0.14 : contactTime <= 240 ? 0.1 : 0.06)));
+  if (endIndex - startIndex < minWindowIdx) {
+    const mid = Math.round((startIndex + endIndex) / 2);
+    startIndex = Math.max(minIndex, mid - Math.floor(minWindowIdx / 2));
+    endIndex = Math.min(timeline.length - 1, startIndex + minWindowIdx);
+  }
+
   const toSec = (idx) => clamp((idx / (timeline.length - 1)) * contactTime, 0, contactTime);
   const sweetPeakIndex = timeline.reduce((bestIdx, p, idx, arr) => (p.sweetness > arr[bestIdx].sweetness ? idx : bestIdx), 0);
   const sweetnessAtPeak = timeline[sweetPeakIndex]?.sweetness || 0;
-  const earlyEnd = Math.max(1, Math.floor(startIndex * 0.75));
+  const earlyEnd = Math.max(1, Math.floor(startIndex * 0.78));
   const lateStart = Math.min(timeline.length - 1, Math.ceil(endIndex * 1.02));
 
   const bitternessSlope = timeline.map((point, idx, arr) => {
@@ -314,7 +335,7 @@ function computeGuidance(timeline, contactTime) {
   });
   const maxBitternessSlope = Math.max(...bitternessSlope);
   const bitternessRiseThreshold = maxBitternessSlope > 0 ? maxBitternessSlope * 0.66 : 0;
-  let bitternessRiseIndex = lateStart;
+  let bitternessRiseIndex = Math.max(lateStart, minIndex);
   for (let i = Math.max(1, startIndex); i < bitternessSlope.length; i++) {
     if (bitternessSlope[i] >= bitternessRiseThreshold && timeline[i].bitterness >= timeline[i].sweetness * 0.8) {
       bitternessRiseIndex = i;
@@ -324,7 +345,7 @@ function computeGuidance(timeline, contactTime) {
   const bitternessRiseValue = timeline[bitternessRiseIndex]?.bitterness || 0;
 
   return {
-    early: { start: 0, end: toSec(earlyEnd) },
+    early: { start: 0, end: toSec(Math.max(earlyEnd, minIndex - 2)) },
     balanced: { start: toSec(startIndex), end: toSec(endIndex) },
     late: { start: toSec(lateStart), end: contactTime },
     targetStop: toSec(Math.round((startIndex + endIndex) / 2)),

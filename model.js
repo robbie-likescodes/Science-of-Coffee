@@ -35,9 +35,9 @@ export const equationLibrary = {
     id: "extractionSpeed",
     title: "Extraction Rate / Speed",
     formula:
-      "extractionSpeed = c.speed × (0.5 + 0.46·grindFine + 0.2·fines + 0.28·agitationEffect + 0.38·tempRate + 0.24·pressureUseful + 0.1·preinfusion + 0.18·roastSolubility - 0.12·finesMigrationRisk)",
+      "extractionSpeed = c.speed × (0.34 + 0.42·grindFine + 0.14·fines + 0.24·agitationEffect + 0.44·tempRate + 0.20·pressureUseful + 0.08·preinfusion + 0.20·roastSolubility - 0.16·finesMigrationRisk)",
     math:
-      "E = c_{\\mathrm{speed}}\\cdot\\Bigl(0.5 + 0.46g + 0.2f + 0.28a + 0.38\\tau + 0.24p + 0.1\\rho + 0.18r_s - 0.12m_f\\Bigr)",
+      "E = c_{\\mathrm{speed}}\\cdot\\Bigl(0.34 + 0.42g + 0.14f + 0.24a + 0.44\\tau + 0.20p + 0.08\\rho + 0.20r_s - 0.16m_f\\Bigr)",
     type: "heuristic",
     affectedGraphs: ["chemical", "flavor"],
     relevance: "Combines grind, temperature, pressure coupling, contact flow and roast solubility into extraction progression speed.",
@@ -54,23 +54,23 @@ export const equationLibrary = {
     },
     compute: ({ c, grindFine, fines, agitationEffect, tempRate, pressureUseful, preinfusion, roastSolubility, finesMigrationRisk }) =>
       c.speed *
-      (0.5 +
-        0.46 * grindFine +
-        0.2 * fines +
-        0.28 * agitationEffect +
-        0.38 * tempRate +
-        0.24 * pressureUseful +
-        0.1 * preinfusion +
-        0.18 * roastSolubility -
-        0.12 * finesMigrationRisk)
+      (0.34 +
+        0.42 * grindFine +
+        0.14 * fines +
+        0.24 * agitationEffect +
+        0.44 * tempRate +
+        0.2 * pressureUseful +
+        0.08 * preinfusion +
+        0.2 * roastSolubility -
+        0.16 * finesMigrationRisk)
   },
   organicAcids: {
     id: "organicAcids",
     title: "Organic Acids Curve",
     formula:
-      "organicAcids = 76·sigmoid(tt,0.13,11)·(1 - 0.36·lateRise(tt,0.54,1.55))·(1 - 0.22·buffering)·(1 + 0.12·minerals)·(1 - 0.1·roast)·(1 + 0.16·tempAcidShift)",
+      "organicAcids = 74·sigmoid(tt,0.16,10)·(1 - 0.34·lateRise(tt,0.57,1.6))·(1 - 0.22·buffering)·(1 + 0.12·minerals)·(1 - 0.1·roast)·(1 + 0.16·tempAcidShift)",
     math:
-      "A_{\\mathrm{org}} = 76\\,\\sigma(t_t;0.13,11)\\,\\Bigl(1 - 0.36L(t_t;0.54,1.55)\\Bigr)\\,(1-0.22b)\\,(1+0.12m)\\,(1-0.1r)\\,(1+0.16\\Delta_a)",
+      "A_{\\mathrm{org}} = 74\\,\\sigma(t_t;0.16,10)\\,\\Bigl(1 - 0.34L(t_t;0.57,1.6)\\Bigr)\\,(1-0.22b)\\,(1+0.12m)\\,(1-0.1r)\\,(1+0.16\\Delta_a)",
     type: "heuristic",
     affectedGraphs: ["chemical", "flavor(acidity)"],
     relevance: "Early extraction acidity proxy with buffering and temperature-dependent retention/muting behavior.",
@@ -82,15 +82,15 @@ export const equationLibrary = {
       tempAcidShift: "Colder extraction increases retained sourness; hotter extraction reduces sharp acidity."
     },
     compute: ({ tt, buffering, minerals, roast, tempAcidShift }) =>
-      76 * sigmoid(tt, 0.13, 11) * (1 - 0.36 * lateRise(tt, 0.54, 1.55)) * (1 - 0.22 * buffering) * (1 + 0.12 * minerals) * (1 - 0.1 * roast) * (1 + 0.16 * tempAcidShift)
+      74 * sigmoid(tt, 0.16, 10) * (1 - 0.34 * lateRise(tt, 0.57, 1.6)) * (1 - 0.22 * buffering) * (1 + 0.12 * minerals) * (1 - 0.1 * roast) * (1 + 0.16 * tempAcidShift)
   },
   sugars: {
     id: "sugars",
     title: "Sugars Curve",
     formula:
-      "sugars = 72·sigmoid(tt,0.31,8.2)·(1 - 0.26·lateRise(tt,0.76,2.5))·(1 + 0.22·extractionEff + 0.08·tempSweetBoost)·(1 - 0.25·unevenness)·(0.92 + 0.1·roast)",
+      "sugars = 74·sigmoid(tt,0.39,8)·(1 - 0.3·lateRise(tt,0.8,2.4))·(1 + 0.24·extractionEff + 0.1·tempSweetBoost)·(1 - 0.28·unevenness)·(0.9 + 0.12·roast)",
     math:
-      "S = 72\\,\\sigma(t_t;0.31,8.2)\\,\\Bigl(1-0.26L(t_t;0.76,2.5)\\Bigr)\\,(1+0.22\\eta+0.08\\Delta_s)\\,(1-0.25u)\\,(0.92+0.1r)",
+      "S = 74\\,\\sigma(t_t;0.39,8)\\,\\Bigl(1-0.3L(t_t;0.8,2.4)\\Bigr)\\,(1+0.24\\eta+0.1\\Delta_s)\\,(1-0.28u)\\,(0.9+0.12r)",
     type: "heuristic",
     affectedGraphs: ["chemical", "flavor(sweetness)"],
     relevance: "Mid-stage sweetness proxy with realistic plateau and late decline under prolonged extraction.",
@@ -102,15 +102,15 @@ export const equationLibrary = {
       tempSweetBoost: "Moderate-hot extraction raises sugar/caramel extraction up to a limit."
     },
     compute: ({ tt, extractionEff, unevenness, roast, tempSweetBoost }) =>
-      72 * sigmoid(tt, 0.31, 8.2) * (1 - 0.26 * lateRise(tt, 0.76, 2.5)) * (1 + 0.22 * extractionEff + 0.08 * tempSweetBoost) * (1 - 0.25 * unevenness) * (0.92 + 0.1 * roast)
+      74 * sigmoid(tt, 0.39, 8) * (1 - 0.3 * lateRise(tt, 0.8, 2.4)) * (1 + 0.24 * extractionEff + 0.1 * tempSweetBoost) * (1 - 0.28 * unevenness) * (0.9 + 0.12 * roast)
   },
   polyphenols: {
     id: "polyphenols",
     title: "Polyphenols Curve",
     formula:
-      "polyphenols = 10·sigmoid(tt,0.5,6.2) + 68·lateRise(tt,0.6,2.25)·(1 + 0.52·fines + 0.42·unevenness + 0.12·concentration + 0.2·tempLateRisk + 0.24·pressureHarshness)",
+      "polyphenols = 8·sigmoid(tt,0.54,6) + 72·lateRise(tt,0.66,2.35)·(1 + 0.55·fines + 0.5·unevenness + 0.1·concentration + 0.24·tempLateRisk + 0.28·pressureHarshness)",
     math:
-      "P = 10\\,\\sigma(t_t;0.5,6.2) + 68\\,L(t_t;0.6,2.25)\\,\\Bigl(1 + 0.52f + 0.42u + 0.12c + 0.2\\lambda + 0.24h\\Bigr)",
+      "P = 8\\,\\sigma(t_t;0.54,6) + 72\\,L(t_t;0.66,2.35)\\,\\Bigl(1 + 0.55f + 0.5u + 0.1c + 0.24\\lambda + 0.28h\\Bigr)",
     type: "heuristic",
     affectedGraphs: ["chemical", "flavor(bitterness, astringency)"],
     relevance: "Late extraction harshness proxy increased by fines, uneven flow, high temperature, and over-aggressive pressure.",
@@ -122,14 +122,14 @@ export const equationLibrary = {
       pressureHarshness: "Pressure/flow mismatch harshness penalty."
     },
     compute: ({ tt, fines, unevenness, concentration, tempLateRisk, pressureHarshness }) =>
-      10 * sigmoid(tt, 0.5, 6.2) +
-      68 * lateRise(tt, 0.6, 2.25) * (1 + 0.52 * fines + 0.42 * unevenness + 0.12 * concentration + 0.2 * tempLateRisk + 0.24 * pressureHarshness)
+      8 * sigmoid(tt, 0.54, 6) +
+      72 * lateRise(tt, 0.66, 2.35) * (1 + 0.55 * fines + 0.5 * unevenness + 0.1 * concentration + 0.24 * tempLateRisk + 0.28 * pressureHarshness)
   },
   flavorBitterness: {
     id: "flavorBitterness",
     title: "Bitterness (Flavor)",
-    formula: "bitterness = (0.58·polyphenols + 0.24·maillard + 0.22·melanoidins)·(0.84 + 0.3·roast)·(0.92 + 0.08·concentration + 0.12·pressureHarshness)",
-    math: "B = (0.58P + 0.24M_a + 0.22M_e)\\,(0.84 + 0.3r)\\,(0.92 + 0.08c + 0.12h)",
+    formula: "bitterness = (0.5·polyphenols + 0.2·maillard + 0.18·melanoidins)·(0.82 + 0.28·roast)·(0.9 + 0.05·concentration + 0.1·pressureHarshness)",
+    math: "B = (0.5P + 0.2M_a + 0.18M_e)\\,(0.82 + 0.28r)\\,(0.9 + 0.05c + 0.1h)",
     type: "heuristic weighting",
     affectedGraphs: ["flavor", "radar(bitterness)"],
     relevance: "Maps late-stage chemistry to perceived bitterness with roast and concentration/pressure harshness amplification.",
@@ -139,7 +139,7 @@ export const equationLibrary = {
       pressureHarshness: "Extra bitterness from aggressive pressure under high resistance/uneven conditions."
     },
     compute: ({ polyphenols, maillard, melanoidins, roast, concentration, pressureHarshness }) =>
-      (0.58 * polyphenols + 0.24 * maillard + 0.22 * melanoidins) * (0.84 + 0.3 * roast) * (0.92 + 0.08 * concentration + 0.12 * pressureHarshness)
+      (0.5 * polyphenols + 0.2 * maillard + 0.18 * melanoidins) * (0.82 + 0.28 * roast) * (0.9 + 0.05 * concentration + 0.1 * pressureHarshness)
   },
   finalClarity: {
     id: "finalClarity",
