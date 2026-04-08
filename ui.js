@@ -408,7 +408,7 @@ export function renderEquations(container, equations) {
       entries: [
         {
           name: "Extraction Speed",
-          tex: "E = c_{\\mathrm{speed}}\\cdot\\Bigl(0.5 + 0.46g + 0.2f + 0.28a + 0.38\\tau + 0.24p + 0.1\\rho + 0.18r_{s} - 0.12m_{f}\\Bigr)",
+          tex: "E = c_{\\mathrm{speed}}\\cdot\\Bigl(0.34 + 0.42g + 0.14f + 0.24a + 0.44\\tau + 0.20p + 0.08\\rho + 0.20r_{s} - 0.16m_{f}\\Bigr)",
           explain: "g = grind fineness, f = fines, a = agitation effect, τ = temperature-rate multiplier, p = useful pressure, ρ = preinfusion ratio."
         },
         {
@@ -428,17 +428,17 @@ export function renderEquations(container, equations) {
       entries: [
         {
           name: "Organic Acids",
-          tex: "A_{\\mathrm{org}} = 76\\,\\sigma(t_t;0.13,11)\\,\\Bigl(1-0.36L(t_t;0.54,1.55)\\Bigr)\\,(1-0.22b)\\,(1+0.12m)\\,(1-0.1r)\\,(1+0.16\\Delta_a)",
+          tex: "A_{\\mathrm{org}} = 74\\,\\sigma(t_t;0.16,10)\\,\\Bigl(1-0.34L(t_t;0.57,1.6)\\Bigr)\\,(1-0.22b)\\,(1+0.12m)\\,(1-0.1r)\\,(1+0.16\\Delta_a)",
           explain: "Early-stage acidity family with buffering/mineral/roast/temperature terms."
         },
         {
           name: "Sugars",
-          tex: "S = 72\\,\\sigma(t_t;0.31,8.2)\\,\\Bigl(1-0.26L(t_t;0.76,2.5)\\Bigr)\\,(1+0.22\\eta+0.08\\Delta_s)\\,(1-0.25u)\\,(0.92+0.1r)",
+          tex: "S = 74\\,\\sigma(t_t;0.39,8)\\,\\Bigl(1-0.30L(t_t;0.8,2.4)\\Bigr)\\,(1+0.24\\eta+0.10\\Delta_s)\\,(1-0.28u)\\,(0.9+0.12r)",
           explain: "Mid-phase sweetness family including efficiency η and unevenness u."
         },
         {
           name: "Polyphenols",
-          tex: "P = 10\\,\\sigma(t_t;0.5,6.2) + 68\\,L(t_t;0.6,2.25)\\,\\Bigl(1+0.52f+0.42u+0.12c+0.2\\lambda+0.24h\\Bigr)",
+          tex: "P = 8\\,\\sigma(t_t;0.54,6) + 72\\,L(t_t;0.66,2.35)\\,\\Bigl(1+0.55f+0.50u+0.10c+0.24\\lambda+0.28h\\Bigr)",
           explain: "Late-phase harshness family where fines, unevenness, concentration, and pressure harshness h are amplified."
         }
       ]
@@ -448,7 +448,7 @@ export function renderEquations(container, equations) {
       entries: [
         {
           name: "Bitterness Mapping",
-          tex: "B = (0.58P + 0.24M_a + 0.22M_e)\\,(0.84 + 0.3r)\\,(0.92 + 0.08c + 0.12h)",
+          tex: "B = (0.50P + 0.20M_a + 0.18M_e)\\,(0.82 + 0.28r)\\,(0.90 + 0.05c + 0.10h)",
           explain: "Maps chemistry (polyphenols + Maillard/melanoidins) to perceived bitterness."
         },
         {

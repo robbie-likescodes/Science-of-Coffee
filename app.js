@@ -240,56 +240,56 @@ function initRadarOverlayInteractions() {
 const sliderEquationMap = {
   dose: {
     title: "Concentration term",
-    equation: "concentration = clamp((dose / brewRatio) / 2.2, 0.35, 3.2)",
+    equation: "concentration = clamp((dose / brewRatio) / 2.4, 0.35, 2.8)",
     variable: "concentration",
     read: (d) => d.concentrationFactor,
     effect: "Higher dose increases concentration, lifting body and intensity while amplifying late bitterness/astringency potential."
   },
   brewRatio: {
     title: "Concentration term",
-    equation: "concentration = clamp((dose / brewRatio) / 2.2, 0.35, 3.2)",
+    equation: "concentration = clamp((dose / brewRatio) / 2.4, 0.35, 2.8)",
     variable: "concentration",
     read: (d) => d.concentrationFactor,
     effect: "Higher brew ratio lowers concentration, usually reducing heavy body and harsh late extraction."
   },
   grindSize: {
     title: "Grind-flow coupling",
-    equation: "grindFine = 1 - s(grindSize); extractionSpeed includes +0.46×grindFine, while high grindFine also raises flowResistance in pressure coupling",
+    equation: "grindFine = 1 - s(grindSize); extractionSpeed includes +0.42×grindFine, while high grindFine also raises flowResistance in pressure coupling",
     variable: "grindFine",
     read: (d) => d.grindFineFactor,
     effect: "Finer grind speeds extraction but increases resistance, making pressure shots more sensitive to harshness and channeling risk."
   },
   temperature: {
     title: "Temperature kinetics",
-    equation: "tempRate = clamp(exp(0.028×(T-93)),0.16,1.65); extractionSpeed includes +0.38×tempRate and polyphenols include +0.20×tempLateRisk",
+    equation: "tempRate = clamp(exp(0.03×(T-93)),0.2,1.75); viscosityFactor = clamp(exp(-0.02×(T-93)),0.7,1.35); extractionSpeed includes +0.44×tempRate",
     variable: "tempRate",
     read: (d) => d.tempFactor,
     effect: "Higher temperature accelerates extraction and can improve sweetness until late-stage bitterness/astringency ramps faster."
   },
   pressure: {
     title: "Method-weighted pressure",
-    equation: "pressureUseful = pressureFactor×methodPressure×clamp(1.18 - 0.5×flowResistance,0.35,1.1)",
+    equation: "pressureUseful = pressureFactor×methodPressure×clamp(1.2 - 0.44×flowResistance,0.2,1.08)",
     variable: "pressureUseful",
     read: (d) => d.pressureUseful,
     effect: "Pressure strongly affects espresso-like methods, but has limited effect in immersion brews; too much useful pressure can increase harshness."
   },
   fines: {
     title: "Fines vs harshness",
-    equation: "polyphenols late term includes (1 + 0.52×fines + ...); finesMigrationRisk also penalizes extractionSpeed and raises astringency",
+    equation: "polyphenols late term includes (1 + 0.55×fines + ...); finesMigrationRisk also penalizes extractionSpeed and raises astringency",
     variable: "fines",
     read: (d) => d.finesFactor,
     effect: "More fines increase extraction intensity and body but also raise clogging/migration risk and late bitterness/astringency."
   },
   roastLevel: {
     title: "Roast solubility and flavor",
-    equation: "roastSolubility = 0.86 + 0.34×roast; bitterness scales with (0.84 + 0.30×roast)",
+    equation: "roastSolubility = 0.86 + 0.34×roast; extractionSpeed includes +0.20×roastSolubility and bitterness scales with roast",
     variable: "roast",
     read: (d) => d.roastFactor,
     effect: "Darker roasts extract faster and skew flavor toward roastiness/bitterness with reduced sharp acidity."
   },
   contactTime: {
     title: "Contact-time progression",
-    equation: "contactFactor = clamp(0.72 + 0.62×sqrt(contactTime / methodDefaultTime), 0.35, 1.8)",
+    equation: "contactFactor = clamp(0.55 + 0.45×sqrt(contactTime / methodDefaultTime), 0.4, 1.55)",
     variable: "contactFactor",
     read: (d) => d.contactFactor,
     effect: "Longer contact time advances extraction into later phases (from acids to sweetness to bitterness/astringency), not just uniform scaling."
@@ -303,7 +303,7 @@ const sliderEquationMap = {
   },
   pressureAggressiveness: {
     title: "Pressure profile harshness",
-    equation: "pressureHarshness increases with max(pressureUseful-0.68,0) and pressureAggressiveness under high flow resistance",
+    equation: "pressureHarshness increases with max(pressureUseful-0.62,0) and pressureAggressiveness under high flow resistance",
     variable: "pressureHarshness",
     read: (d) => d.pressureHarshness,
     effect: "Aggressive pressure profiles can increase channeling/harshness risk when grind and puck resistance are mismatched."
