@@ -89,6 +89,7 @@ function drawMarkers(ctx, pad, cw, ch, guidance, xMax, xMode) {
     const x = xMode === "actual" ? v : v / xMax;
     return pad.l + (x / xMax) * cw;
   };
+  const toY = (value) => pad.t + (1 - value / 100) * ch;
   const drawArrow = (fromX, fromY, toXPos, toYPos, color = "#cde7ff") => {
     const headLength = 6;
     const angle = Math.atan2(toYPos - fromY, toXPos - fromX);
@@ -141,13 +142,13 @@ function drawMarkers(ctx, pad, cw, ch, guidance, xMax, xMode) {
   const sweetnessTextX = Math.min(sweetX + 8, pad.l + cw - 120);
   const sweetnessTextY = pad.t + 28;
   ctx.fillText("Sweetness plateau", sweetnessTextX, sweetnessTextY);
-  drawArrow(sweetnessTextX + 102, sweetnessTextY - 4, sweetX, pad.t + ch * 0.18, "#9ae6b4");
+  drawArrow(sweetnessTextX + 102, sweetnessTextY - 4, sweetX, toY(guidance.sweetPeakValue ?? 80), "#9ae6b4");
 
-  const bitterX = toX(guidance.late.start);
+  const bitterX = toX(guidance.bitternessRiseTime ?? guidance.late.start);
   const bitternessTextX = Math.min(bitterX + 8, pad.l + cw - 110);
   const bitternessTextY = pad.t + 42;
   ctx.fillText("Bitterness rising", bitternessTextX, bitternessTextY);
-  drawArrow(bitternessTextX + 95, bitternessTextY - 4, bitterX, pad.t + ch * 0.32, "#f4a261");
+  drawArrow(bitternessTextX + 95, bitternessTextY - 4, bitterX, toY(guidance.bitternessRiseValue ?? 65), "#f4a261");
 }
 
 export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContext) {
