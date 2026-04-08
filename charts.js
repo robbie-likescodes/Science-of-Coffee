@@ -89,6 +89,30 @@ function drawMarkers(ctx, pad, cw, ch, guidance, xMax, xMode) {
     const x = xMode === "actual" ? v : v / xMax;
     return pad.l + (x / xMax) * cw;
   };
+  const drawArrow = (fromX, fromY, toXPos, toYPos, color = "#cde7ff") => {
+    const headLength = 6;
+    const angle = Math.atan2(toYPos - fromY, toXPos - fromX);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toXPos, toYPos);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(toXPos, toYPos);
+    ctx.lineTo(
+      toXPos - headLength * Math.cos(angle - Math.PI / 6),
+      toYPos - headLength * Math.sin(angle - Math.PI / 6)
+    );
+    ctx.lineTo(
+      toXPos - headLength * Math.cos(angle + Math.PI / 6),
+      toYPos - headLength * Math.sin(angle + Math.PI / 6)
+    );
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
 
   const targetX = toX(guidance.targetStop);
   ctx.strokeStyle = "#71e39e";
@@ -110,9 +134,20 @@ function drawMarkers(ctx, pad, cw, ch, guidance, xMax, xMode) {
 
   ctx.fillStyle = "#cde7ff";
   ctx.font = "11px sans-serif";
-  ctx.fillText("Balanced zone", toX((guidance.balanced.start + guidance.balanced.end) / 2) - 34, pad.t + 14);
-  ctx.fillText("Sweetness plateau", sweetX + 4, pad.t + 28);
-  ctx.fillText("Bitterness rising", toX(guidance.late.start) + 4, pad.t + 42);
+  const balancedTextX = toX((guidance.balanced.start + guidance.balanced.end) / 2) - 34;
+  const balancedTextY = pad.t + 14;
+  ctx.fillText("Balanced zone", balancedTextX, balancedTextY);
+
+  const sweetnessTextX = Math.min(sweetX + 8, pad.l + cw - 120);
+  const sweetnessTextY = pad.t + 28;
+  ctx.fillText("Sweetness plateau", sweetnessTextX, sweetnessTextY);
+  drawArrow(sweetnessTextX + 102, sweetnessTextY - 4, sweetX, pad.t + ch * 0.18, "#9ae6b4");
+
+  const bitterX = toX(guidance.late.start);
+  const bitternessTextX = Math.min(bitterX + 8, pad.l + cw - 110);
+  const bitternessTextY = pad.t + 42;
+  ctx.fillText("Bitterness rising", bitternessTextX, bitternessTextY);
+  drawArrow(bitternessTextX + 95, bitternessTextY - 4, bitterX, pad.t + ch * 0.32, "#f4a261");
 }
 
 export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContext) {
