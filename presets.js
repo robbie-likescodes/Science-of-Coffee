@@ -256,7 +256,7 @@ export const brewMethodPresets = {
       dose: { min: 40, max: 120, step: 1 },
       brewRatio: { min: 6, max: 14, step: 0.1 },
       grindSize: { min: 65, max: 95, step: 1 },
-      contactTime: { min: 28800, max: 86400, step: 3600 },
+      contactTime: { min: 28800, max: 180000, step: 3600 },
       pressure: { min: 1, max: 1.2, step: 0.1 },
       pressureAggressiveness: { min: 0, max: 5, step: 1 },
       preinfusion: { min: 0, max: 30, step: 1 },
