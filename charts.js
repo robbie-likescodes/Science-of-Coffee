@@ -125,7 +125,8 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContex
   const pad = { l: 54, r: 20, t: 24, b: 42 };
   const cw = w - pad.l - pad.r;
   const ch = h - pad.t - pad.b;
-  const xMax = xMode === "actual" ? Math.max(timeline[timeline.length - 1]?.seconds || 1, 1) : 1;
+  const lastPoint = timeline[timeline.length - 1];
+  const xMax = xMode === "actual" ? Math.max((lastPoint && lastPoint.seconds) || 1, 1) : 1;
 
   if (guidance) drawGuidanceZones(ctx, pad, cw, ch, guidance, xMode === "actual" ? xMax : guidance.late.end, xMode);
 
