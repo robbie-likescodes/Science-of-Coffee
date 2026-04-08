@@ -282,22 +282,22 @@ export function getControlDefinition(key) {
 export function getControlSpec(processKey, key) {
   const methodPreset = brewMethodPresets[processKey];
   const base = commonControlConfig[key];
-  const override = methodPreset?.ranges?.[key];
+  const override = methodPreset && methodPreset.ranges ? methodPreset.ranges[key] : undefined;
 
   if (!base) return null;
 
   if (base.type === "select") {
     return {
       ...base,
-      options: override?.options ? [...override.options] : [...base.options]
+      options: override && override.options ? [...override.options] : [...base.options]
     };
   }
 
   return {
     ...base,
-    min: override?.min ?? base.min,
-    max: override?.max ?? base.max,
-    step: override?.step ?? base.step
+    min: override && override.min !== undefined ? override.min : base.min,
+    max: override && override.max !== undefined ? override.max : base.max,
+    step: override && override.step !== undefined ? override.step : base.step
   };
 }
 

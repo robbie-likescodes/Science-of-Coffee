@@ -394,7 +394,9 @@ function renderVariablePage(variableKey) {
   if (!variableContent || !variableKey) return;
   const baseDoc = variableDocs[variableKey];
   if (!baseDoc) {
-    renderVariableDocumentation(variableContent, null, brewMethodPresets[state.process]?.label || state.process, () => {
+    const preset = brewMethodPresets[state.process];
+    const processLabel = (preset && preset.label) || state.process;
+    renderVariableDocumentation(variableContent, null, processLabel, () => {
       window.location.hash = "#simulator";
     });
     return;
@@ -403,7 +405,9 @@ function renderVariablePage(variableKey) {
     ...baseDoc,
     equationRefs: getVariableEquationRefs(variableKey)
   };
-  renderVariableDocumentation(variableContent, variableDoc, brewMethodPresets[state.process]?.label || state.process, () => {
+  const currentPreset = brewMethodPresets[state.process];
+  const currentProcessLabel = (currentPreset && currentPreset.label) || state.process;
+  renderVariableDocumentation(variableContent, variableDoc, currentProcessLabel, () => {
     window.location.hash = "#simulator";
   });
 }
@@ -431,8 +435,8 @@ function emitEquationPopup(key, previousParams, nextParams, anchorEl) {
   const prev = getModelDerivatives(state.process, previousParams);
   const next = getModelDerivatives(state.process, nextParams);
   const metric = mapping.variable;
-  const beforeRaw = prev[metric] ?? "n/a";
-  const afterRaw = next[metric] ?? "n/a";
+  const beforeRaw = prev[metric] !== undefined ? prev[metric] : "n/a";
+  const afterRaw = next[metric] !== undefined ? next[metric] : "n/a";
   const before = mapping.format ? mapping.format(beforeRaw) : formatValue(beforeRaw);
   const after = mapping.format ? mapping.format(afterRaw) : formatValue(afterRaw);
 
@@ -474,7 +478,8 @@ function setProcess(processKey) {
 }
 
 function applyMethodDefaults(processKey) {
-  const defaults = brewMethodPresets[processKey]?.defaults;
+  const methodPreset = brewMethodPresets[processKey];
+  const defaults = methodPreset ? methodPreset.defaults : null;
   if (!defaults || !controlsContainer) return;
   state.params = { ...defaults };
   processSelect.value = processKey;

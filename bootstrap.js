@@ -43,7 +43,8 @@ async function fallbackInit() {
       ["acidity", "sweetness", "bitterness", "body", "polyphenols", "aroma", "clarity", "floralFruit", "chocoNut"].forEach((k) => {
         const card = document.createElement("div");
         card.className = "stat";
-        card.innerHTML = `<div class="label">${k}</div><div class="value">${Math.round(result.finalProfile?.[k] ?? 0)}</div>`;
+        const profileValue = result.finalProfile && result.finalProfile[k] !== undefined ? result.finalProfile[k] : 0;
+        card.innerHTML = `<div class="label">${k}</div><div class="value">${Math.round(profileValue)}</div>`;
         statsEl.appendChild(card);
       });
     }
@@ -64,7 +65,10 @@ async function fallbackInit() {
     charts.drawTimeChart(timeChart, result.timeline, state.graphMode, state.visibleCurves, { xMode: state.xMode, guidance: result.guidance });
     charts.drawRadarChart(radarChart, result.finalProfile, { compact: true });
     renderSummary(result);
-    if (processDescription) processDescription.textContent = brewMethodPresets[state.process]?.description || "";
+    if (processDescription) {
+      const preset = brewMethodPresets[state.process];
+      processDescription.textContent = (preset && preset.description) || "";
+    }
   }
 
   function renderControls() {

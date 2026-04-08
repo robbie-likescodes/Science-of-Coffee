@@ -364,14 +364,14 @@ export function getModelDerivatives(processKey, params) {
 }
 
 function buildSummary(processKey, profile, guidance) {
-  const methodName = processPresets[processKey]?.label || "Brew";
+  const methodName = (processPresets[processKey] && processPresets[processKey].label) || "Brew";
   return `${methodName}: balanced window ${Math.round(guidance.balanced.start)}-${Math.round(guidance.balanced.end)}s. Acidity ${Math.round(
     profile.acidity
   )}, sweetness ${Math.round(profile.sweetness)}, bitterness ${Math.round(profile.bitterness)}, body ${Math.round(profile.body)}.`;
 }
 
 function buildInterpretation(processKey, model, guidance) {
-  const methodName = processPresets[processKey]?.label || "brew";
+  const methodName = (processPresets[processKey] && processPresets[processKey].label) || "brew";
   const bullets = [];
 
   if (model.tempLateRisk > 0.7) bullets.push("High temperature increases late extraction harshness; stop slightly earlier.");

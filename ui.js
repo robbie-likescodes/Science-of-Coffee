@@ -38,7 +38,8 @@ export function initViewTabs(container, currentView, onChange) {
 
 export function renderMethodDescription(descriptionEl, processKey) {
   if (!descriptionEl) return;
-  descriptionEl.textContent = brewMethodPresets[processKey]?.description || "";
+  const preset = brewMethodPresets[processKey];
+  descriptionEl.textContent = (preset && preset.description) || "";
 }
 
 export function renderControls(container, state, processKey, onInput, onTitleClick) {
@@ -191,7 +192,7 @@ export function createEquationPopupManager() {
   }
 
   function show(details) {
-    if (!details?.anchorEl) return;
+    if (!details || !details.anchorEl) return;
     const rect = details.anchorEl.getBoundingClientRect();
     popup.innerHTML = `
       <div class="equation-title">${details.title}</div>
@@ -262,7 +263,7 @@ function createMathBlock(tex, fallbackText) {
 }
 
 function scheduleMathTypeset(scopeEl) {
-  if (window.MathJax?.typesetPromise) {
+  if (window.MathJax && window.MathJax.typesetPromise) {
     window.MathJax.typesetPromise([scopeEl]).catch(() => {});
     return;
   }
