@@ -67,6 +67,7 @@ if (missingCoreElements.length) {
 const state = {
   process: "espresso",
   view: "simulator",
+  activeVariableKey: null,
   graphMode: "flavor",
   xMode: "actual",
   visibleCurves: getDefaultVisibleCurves("flavor"),
@@ -106,7 +107,8 @@ function renderViewState() {
   const showModel = state.view === "model";
   const showVariable = state.view === "variable";
   simulatorView.classList.toggle("hidden", !showSimulator);
-  if (modelView) modelView.classList.toggle("hidden", showSimulator);
+  if (modelView) modelView.classList.toggle("hidden", !showModel);
+  if (variableView) variableView.classList.toggle("hidden", !showVariable);
   processPickerWrap.classList.toggle("hidden", !showSimulator);
   processDescription.classList.toggle("hidden", !showSimulator);
   if (radarOverlay) radarOverlay.classList.toggle("hidden", !showSimulator);
@@ -376,6 +378,52 @@ function formatValue(value) {
   return typeof value === "number" ? value.toFixed(3) : String(value);
 }
 
+function getVariableEquationRefs(key) {
+  const mapping = sliderEquationMap[key];
+  if (!mapping) return [];
+  return [
+    {
+      title: mapping.title,
+      formula: mapping.equation,
+      explanation: `This variable primarily maps through "${mapping.variable}" in the simulator's extraction and flavor calculations.`
+    }
+  ];
+}
+
+function renderVariablePage(variableKey) {
+  if (!variableContent || !variableKey) return;
+  const baseDoc = variableDocs[variableKey];
+  if (!baseDoc) {
+    renderVariableDocumentation(variableContent, null, brewMethodPresets[state.process]?.label || state.process, () => {
+      window.location.hash = "#simulator";
+    });
+    return;
+  }
+  const variableDoc = {
+    ...baseDoc,
+    equationRefs: getVariableEquationRefs(variableKey)
+  };
+  renderVariableDocumentation(variableContent, variableDoc, brewMethodPresets[state.process]?.label || state.process, () => {
+    window.location.hash = "#simulator";
+  });
+}
+
+function syncViewFromHash() {
+  const hash = window.location.hash || "#simulator";
+  if (hash === "#model") {
+    state.view = "model";
+    state.activeVariableKey = null;
+  } else if (hash.startsWith("#variable/")) {
+    state.view = "variable";
+    state.activeVariableKey = decodeURIComponent(hash.slice("#variable/".length));
+  } else {
+    state.view = "simulator";
+    state.activeVariableKey = null;
+  }
+  renderViewState();
+  if (state.view === "variable") renderVariablePage(state.activeVariableKey);
+}
+
 function emitEquationPopup(key, previousParams, nextParams, anchorEl) {
   const mapping = getControlEquationMeta(key);
   if (!mapping || !anchorEl) return;
@@ -419,6 +467,9 @@ function setProcess(processKey) {
   state.process = processKey;
   renderMethodDescription(processDescription, processKey);
   applyMethodDefaults(processKey);
+  if (state.view === "variable" && state.activeVariableKey) {
+    renderVariablePage(state.activeVariableKey);
+  }
   emitProcessPopup(processKey, previousProcess);
 }
 
@@ -454,9 +505,10 @@ if (missingCoreElements.length === 0) {
   initProcessSelector(processSelect, setProcess);
   renderGraphControlState();
   if (viewTabs && modelView) {
-    renderViewState();
     if (modelToc && modelContent) renderModelDocumentation(modelToc, modelContent);
   }
   initRadarOverlayInteractions();
   setProcess(state.process);
+  syncViewFromHash();
+  window.addEventListener("hashchange", syncViewFromHash);
 }
