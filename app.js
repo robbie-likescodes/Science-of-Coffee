@@ -53,33 +53,6 @@ const coreElements = {
   axisModeControls,
   curveControls,
   simulatorView,
-  processPickerWrap,
-  variableView,
-  variableContent
-};
-
-const missingCoreElements = Object.entries(coreElements)
-  .filter(([, value]) => !value)
-  .map(([key]) => key);
-
-if (missingCoreElements.length) {
-  console.error("[coffee-sim] Missing required DOM elements:", missingCoreElements.join(", "));
-}
-
-const coreElements = {
-  processSelect,
-  processDescription,
-  controlsContainer,
-  summaryText,
-  interpretationBox,
-  equationsContent,
-  statsEl,
-  timeChart,
-  radarChart,
-  graphModeControls,
-  axisModeControls,
-  curveControls,
-  simulatorView,
   processPickerWrap
 };
 
