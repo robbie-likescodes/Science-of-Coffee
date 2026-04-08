@@ -68,6 +68,12 @@ function formatSecondsLabel(seconds) {
 
 
 function drawGuidanceZones(ctx, pad, cw, ch, guidance, xMax, xMode) {
+  const guidanceDomainMax = Math.max(guidance?.late?.end || 1, 1);
+  const normalizeX = (value) => {
+    if (xMode === "actual") return Math.max(0, Math.min(xMax, value));
+    return Math.max(0, Math.min(1, value / guidanceDomainMax));
+  };
+
   const zones = [
     { ...guidance.early, color: "rgba(71, 133, 255, 0.15)" },
     { ...guidance.balanced, color: "rgba(84, 221, 152, 0.16)" },
@@ -75,18 +81,23 @@ function drawGuidanceZones(ctx, pad, cw, ch, guidance, xMax, xMode) {
   ];
 
   zones.forEach((zone) => {
-    const start = xMode === "actual" ? zone.start : zone.start / xMax;
-    const end = xMode === "actual" ? zone.end : zone.end / xMax;
-    const x0 = pad.l + Math.max(0, start) / xMax * cw;
-    const x1 = pad.l + Math.min(xMax, end) / xMax * cw;
+    const start = normalizeX(zone.start);
+    const end = normalizeX(zone.end);
+    const x0 = pad.l + (start / xMax) * cw;
+    const x1 = pad.l + (end / xMax) * cw;
     ctx.fillStyle = zone.color;
     ctx.fillRect(x0, pad.t, Math.max(0, x1 - x0), ch);
   });
 }
 
 function drawMarkers(ctx, pad, cw, ch, guidance, xMax, xMode) {
+  const guidanceDomainMax = Math.max(guidance?.late?.end || 1, 1);
+  const normalizeX = (value) => {
+    if (xMode === "actual") return Math.max(0, Math.min(xMax, value));
+    return Math.max(0, Math.min(1, value / guidanceDomainMax));
+  };
   const toX = (v) => {
-    const x = xMode === "actual" ? v : v / xMax;
+    const x = normalizeX(v);
     return pad.l + (x / xMax) * cw;
   };
   const toY = (value) => pad.t + (1 - value / 100) * ch;
@@ -135,20 +146,26 @@ function drawMarkers(ctx, pad, cw, ch, guidance, xMax, xMode) {
 
   ctx.fillStyle = "#cde7ff";
   ctx.font = "11px sans-serif";
-  const balancedTextX = toX((guidance.balanced.start + guidance.balanced.end) / 2) - 34;
+  const labelX = (anchorX, width = 120, offset = 10) => {
+    const minX = pad.l + 4;
+    const maxX = pad.l + cw - width - 4;
+    return Math.max(minX, Math.min(anchorX + offset, maxX));
+  };
+
+  const balancedTextX = labelX(toX((guidance.balanced.start + guidance.balanced.end) / 2), 86, -42);
   const balancedTextY = pad.t + 14;
   ctx.fillText("Balanced zone", balancedTextX, balancedTextY);
 
-  const sweetnessTextX = Math.min(sweetX + 8, pad.l + cw - 120);
-  const sweetnessTextY = pad.t + 28;
+  const sweetnessTextX = labelX(sweetX, 110, 10);
+  const sweetnessTextY = pad.t + 30;
   ctx.fillText("Sweetness plateau", sweetnessTextX, sweetnessTextY);
-  drawArrow(sweetnessTextX + 102, sweetnessTextY - 4, sweetX, toY(guidance.sweetPeakValue ?? 80), "#9ae6b4");
+  drawArrow(sweetnessTextX + 100, sweetnessTextY - 4, sweetX, toY(guidance.sweetPeakValue ?? 80), "#9ae6b4");
 
   const bitterX = toX(guidance.bitternessRiseTime ?? guidance.late.start);
-  const bitternessTextX = Math.min(bitterX + 8, pad.l + cw - 110);
-  const bitternessTextY = pad.t + 42;
+  const bitternessTextX = labelX(bitterX, 98, 10);
+  const bitternessTextY = pad.t + 46;
   ctx.fillText("Bitterness rising", bitternessTextX, bitternessTextY);
-  drawArrow(bitternessTextX + 95, bitternessTextY - 4, bitterX, toY(guidance.bitternessRiseValue ?? 65), "#f4a261");
+  drawArrow(bitternessTextX + 92, bitternessTextY - 4, bitterX, toY(guidance.bitternessRiseValue ?? 65), "#f4a261");
 }
 
 export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContext) {
@@ -164,7 +181,7 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContex
   const lastPoint = timeline[timeline.length - 1];
   const xMax = xMode === "actual" ? Math.max((lastPoint && lastPoint.seconds) || 1, 1) : 1;
 
-  if (guidance) drawGuidanceZones(ctx, pad, cw, ch, guidance, xMode === "actual" ? xMax : guidance.late.end, xMode);
+  if (guidance) drawGuidanceZones(ctx, pad, cw, ch, guidance, xMax, xMode);
 
   ctx.strokeStyle = "#213253";
   ctx.lineWidth = 1;
@@ -218,7 +235,7 @@ export function drawTimeChart(canvas, timeline, mode, visibleCurves, chartContex
     ctx.stroke();
   }
 
-  if (guidance) drawMarkers(ctx, pad, cw, ch, guidance, xMode === "actual" ? xMax : guidance.late.end, xMode);
+  if (guidance) drawMarkers(ctx, pad, cw, ch, guidance, xMax, xMode);
 
   ctx.setLineDash([]);
   ctx.fillStyle = "#9db3da";
