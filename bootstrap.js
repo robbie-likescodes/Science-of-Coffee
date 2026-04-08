@@ -70,8 +70,7 @@ async function fallbackInit() {
   function renderControls() {
     controlsContainer.innerHTML = "";
     controlConfig.forEach((cfg) => {
-      if (!Array.isArray(cfg)) return;
-      const [key, label, minOrOpts, max, step] = cfg;
+      const { key, label, type } = cfg;
       const wrap = document.createElement("div");
       wrap.className = "control";
 
@@ -84,9 +83,10 @@ async function fallbackInit() {
       head.append(title, val);
       wrap.appendChild(head);
 
-      if (Array.isArray(minOrOpts)) {
+      if (type === "select") {
         const select = document.createElement("select");
-        minOrOpts.forEach((optVal) => {
+        const options = Array.isArray(cfg.options) ? cfg.options : [];
+        options.forEach((optVal) => {
           const opt = document.createElement("option");
           opt.value = optVal;
           opt.textContent = optVal;
@@ -102,12 +102,12 @@ async function fallbackInit() {
       } else {
         const input = document.createElement("input");
         input.type = "range";
-        input.min = String(minOrOpts);
-        input.max = String(max);
-        input.step = String(step);
+        input.min = String(cfg.min);
+        input.max = String(cfg.max);
+        input.step = String(cfg.step);
         input.value = String(state.params[key]);
         input.addEventListener("input", () => {
-          const next = step < 1 ? parseFloat(input.value) : parseInt(input.value, 10);
+          const next = cfg.step < 1 ? parseFloat(input.value) : parseInt(input.value, 10);
           state.params[key] = next;
           val.textContent = next;
           rerender();
