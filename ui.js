@@ -157,7 +157,26 @@ export function renderVariableDocumentation(container, variableDoc, processLabel
   });
   flavor.appendChild(flavorList);
 
-  container.append(back, h2, subtitle, relevance, methods, flavor);
+  const equationRefs = document.createElement("article");
+  equationRefs.className = "eq-card";
+  equationRefs.innerHTML = "<h3>Where this variable is used in mapping equations</h3>";
+  const equationList = document.createElement("ul");
+  equationList.className = "eq-vars";
+  const references = Array.isArray(variableDoc.equationRefs) ? variableDoc.equationRefs : [];
+  if (references.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "No equation references are currently documented for this variable.";
+    equationList.appendChild(li);
+  } else {
+    references.forEach((entry) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<strong>${entry.title}</strong>: <code>${entry.formula}</code><br>${entry.explanation}`;
+      equationList.appendChild(li);
+    });
+  }
+  equationRefs.appendChild(equationList);
+
+  container.append(back, h2, subtitle, relevance, methods, flavor, equationRefs);
 }
 
 export function createEquationPopupManager() {
