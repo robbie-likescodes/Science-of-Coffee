@@ -302,16 +302,36 @@ function computeGuidance(timeline, contactTime) {
 
   const toSec = (idx) => clamp((idx / (timeline.length - 1)) * contactTime, 0, contactTime);
   const sweetPeakIndex = timeline.reduce((bestIdx, p, idx, arr) => (p.sweetness > arr[bestIdx].sweetness ? idx : bestIdx), 0);
-
+  const sweetnessAtPeak = timeline[sweetPeakIndex]?.sweetness || 0;
   const earlyEnd = Math.max(1, Math.floor(startIndex * 0.75));
   const lateStart = Math.min(timeline.length - 1, Math.ceil(endIndex * 1.02));
+
+  const bitternessSlope = timeline.map((point, idx, arr) => {
+    if (idx === 0) return 0;
+    const prev = arr[idx - 1];
+    const dt = Math.max((point.seconds || 0) - (prev.seconds || 0), 1e-6);
+    return (point.bitterness - prev.bitterness) / dt;
+  });
+  const maxBitternessSlope = Math.max(...bitternessSlope);
+  const bitternessRiseThreshold = maxBitternessSlope > 0 ? maxBitternessSlope * 0.66 : 0;
+  let bitternessRiseIndex = lateStart;
+  for (let i = Math.max(1, startIndex); i < bitternessSlope.length; i++) {
+    if (bitternessSlope[i] >= bitternessRiseThreshold && timeline[i].bitterness >= timeline[i].sweetness * 0.8) {
+      bitternessRiseIndex = i;
+      break;
+    }
+  }
+  const bitternessRiseValue = timeline[bitternessRiseIndex]?.bitterness || 0;
 
   return {
     early: { start: 0, end: toSec(earlyEnd) },
     balanced: { start: toSec(startIndex), end: toSec(endIndex) },
     late: { start: toSec(lateStart), end: contactTime },
     targetStop: toSec(Math.round((startIndex + endIndex) / 2)),
-    sweetPeakTime: toSec(sweetPeakIndex)
+    sweetPeakTime: toSec(sweetPeakIndex),
+    sweetPeakValue: sweetnessAtPeak,
+    bitternessRiseTime: toSec(bitternessRiseIndex),
+    bitternessRiseValue
   };
 }
 
