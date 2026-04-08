@@ -281,7 +281,7 @@ function deriveModel(processKey, params) {
 }
 
 function computeGuidance(timeline, contactTime) {
-  const minFraction = contactTime <= 60 ? 0.78 : contactTime <= 240 ? 0.28 : 0.12;
+  const minFraction = contactTime <= 60 ? 0.62 : contactTime <= 240 ? 0.24 : 0.1;
   const minIndex = Math.floor((timeline.length - 1) * minFraction);
   const scores = timeline.map((p, idx) => {
     const underExtractionPenalty = idx < minIndex ? (minIndex - idx) * 0.9 : 0;
@@ -292,6 +292,25 @@ function computeGuidance(timeline, contactTime) {
 
   let startIndex = Math.max(minIndex, peakIndex - 8);
   let endIndex = Math.min(timeline.length - 1, peakIndex + 8);
+  const sweetnessPeak = timeline[peakIndex]?.sweetness || 0;
+  const bitternessSlope = timeline.map((point, idx, arr) => {
+    if (idx === 0) return 0;
+    const prev = arr[idx - 1];
+    const dt = Math.max((point.seconds || 0) - (prev.seconds || 0), 1e-6);
+    return (point.bitterness - prev.bitterness) / dt;
+  });
+  const maxBitternessSlope = Math.max(...bitternessSlope);
+  const bitternessRiseThreshold = maxBitternessSlope > 0 ? maxBitternessSlope * 0.62 : 0;
+  let sweetnessPlateauIndex = peakIndex;
+  for (let i = minIndex; i <= peakIndex; i++) {
+    const point = timeline[i];
+    const sweetEnough = point.sweetness >= sweetnessPeak * 0.88;
+    const controlledHarshness = point.bitterness <= point.sweetness * 0.78 && point.astringency <= 62;
+    if (sweetEnough && controlledHarshness) {
+      sweetnessPlateauIndex = i;
+      break;
+    }
+  }
 
   for (let i = peakIndex; i >= 0; i--) {
     if (scores[i] < peakScore * 0.95 && i >= minIndex) {
@@ -299,6 +318,7 @@ function computeGuidance(timeline, contactTime) {
       break;
     }
   }
+  startIndex = Math.max(minIndex, Math.min(startIndex, sweetnessPlateauIndex));
 
   for (let i = peakIndex; i < scores.length; i++) {
     const harsh = timeline[i].bitterness > timeline[i].sweetness + 8 || timeline[i].astringency > 55;
@@ -321,27 +341,22 @@ function computeGuidance(timeline, contactTime) {
     endIndex = Math.min(timeline.length - 1, startIndex + minWindowIdx);
   }
 
-  const toSec = (idx) => clamp((idx / (timeline.length - 1)) * contactTime, 0, contactTime);
-  const sweetPeakIndex = timeline.reduce((bestIdx, p, idx, arr) => (p.sweetness > arr[bestIdx].sweetness ? idx : bestIdx), 0);
-  const sweetnessAtPeak = timeline[sweetPeakIndex]?.sweetness || 0;
-  const earlyEnd = Math.max(1, Math.floor(startIndex * 0.78));
-  const lateStart = Math.min(timeline.length - 1, Math.ceil(endIndex * 1.02));
-
-  const bitternessSlope = timeline.map((point, idx, arr) => {
-    if (idx === 0) return 0;
-    const prev = arr[idx - 1];
-    const dt = Math.max((point.seconds || 0) - (prev.seconds || 0), 1e-6);
-    return (point.bitterness - prev.bitterness) / dt;
-  });
-  const maxBitternessSlope = Math.max(...bitternessSlope);
-  const bitternessRiseThreshold = maxBitternessSlope > 0 ? maxBitternessSlope * 0.66 : 0;
-  let bitternessRiseIndex = Math.max(lateStart, minIndex);
-  for (let i = Math.max(1, startIndex); i < bitternessSlope.length; i++) {
-    if (bitternessSlope[i] >= bitternessRiseThreshold && timeline[i].bitterness >= timeline[i].sweetness * 0.8) {
+  let bitternessRiseIndex = Math.max(endIndex, minIndex);
+  for (let i = Math.max(1, startIndex + 1); i < bitternessSlope.length; i++) {
+    const point = timeline[i];
+    if (bitternessSlope[i] >= bitternessRiseThreshold && point.bitterness >= point.sweetness * 0.84) {
       bitternessRiseIndex = i;
       break;
     }
   }
+  endIndex = Math.min(endIndex, bitternessRiseIndex);
+  endIndex = Math.max(endIndex, startIndex + 1);
+
+  const toSec = (idx) => clamp((idx / (timeline.length - 1)) * contactTime, 0, contactTime);
+  const sweetPeakIndex = timeline.reduce((bestIdx, p, idx, arr) => (p.sweetness > arr[bestIdx].sweetness ? idx : bestIdx), 0);
+  const sweetnessAtPeak = timeline[sweetPeakIndex]?.sweetness || 0;
+  const earlyEnd = Math.max(1, Math.min(startIndex - 1, sweetnessPlateauIndex));
+  const lateStart = Math.max(endIndex, bitternessRiseIndex);
   const bitternessRiseValue = timeline[bitternessRiseIndex]?.bitterness || 0;
 
   return {
