@@ -53,33 +53,6 @@ const coreElements = {
   axisModeControls,
   curveControls,
   simulatorView,
-  processPickerWrap,
-  variableView,
-  variableContent
-};
-
-const missingCoreElements = Object.entries(coreElements)
-  .filter(([, value]) => !value)
-  .map(([key]) => key);
-
-if (missingCoreElements.length) {
-  console.error("[coffee-sim] Missing required DOM elements:", missingCoreElements.join(", "));
-}
-
-const coreElements = {
-  processSelect,
-  processDescription,
-  controlsContainer,
-  summaryText,
-  interpretationBox,
-  equationsContent,
-  statsEl,
-  timeChart,
-  radarChart,
-  graphModeControls,
-  axisModeControls,
-  curveControls,
-  simulatorView,
   processPickerWrap
 };
 
@@ -157,48 +130,109 @@ function rerender() {
 function initRadarOverlayInteractions() {
   if (!radarOverlay) return;
   const title = radarOverlay.querySelector(".radar-overlay-title") || radarOverlay.querySelector("h2");
+  const resizeHandle = radarOverlay.querySelector(".radar-overlay-resize");
   if (!title) return;
 
-  let dragging = false;
-  let startX = 0;
-  let startY = 0;
-  let baseLeft = 0;
-  let baseTop = 0;
-
-  const onMove = (event) => {
-    if (!dragging) return;
-    const nextLeft = Math.min(
-      Math.max(8, baseLeft + (event.clientX - startX)),
-      window.innerWidth - radarOverlay.offsetWidth - 8
-    );
-    const nextTop = Math.min(
-      Math.max(8, baseTop + (event.clientY - startY)),
-      window.innerHeight - radarOverlay.offsetHeight - 8
-    );
-    radarOverlay.style.left = `${nextLeft}px`;
-    radarOverlay.style.top = `${nextTop}px`;
+  const clampOverlayToViewport = () => {
+    const currentLeft = radarOverlay.offsetLeft;
+    const currentTop = radarOverlay.offsetTop;
+    const maxLeft = Math.max(8, window.innerWidth - radarOverlay.offsetWidth - 8);
+    const maxTop = Math.max(8, window.innerHeight - radarOverlay.offsetHeight - 8);
+    radarOverlay.style.left = `${Math.min(Math.max(8, currentLeft), maxLeft)}px`;
+    radarOverlay.style.top = `${Math.min(Math.max(8, currentTop), maxTop)}px`;
     radarOverlay.style.right = "auto";
+    radarOverlay.style.bottom = "auto";
   };
 
-  const onUp = () => {
-    dragging = false;
-    title.classList.remove("dragging");
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
+  let dragState = null;
+  let resizeState = null;
+
+  const resizeRadarCanvas = () => {
+    if (!radarChart) return;
+    const chartSize = Math.max(150, Math.floor(radarChart.clientWidth));
+    if (radarChart.width === chartSize && radarChart.height === chartSize) return;
+    radarChart.width = chartSize;
+    radarChart.height = chartSize;
+    rerender();
+  };
+
+  const onPointerMove = (event) => {
+    if (dragState) {
+      const maxLeft = Math.max(8, window.innerWidth - radarOverlay.offsetWidth - 8);
+      const maxTop = Math.max(8, window.innerHeight - radarOverlay.offsetHeight - 8);
+      const nextLeft = Math.min(Math.max(8, dragState.baseLeft + (event.clientX - dragState.startX)), maxLeft);
+      const nextTop = Math.min(Math.max(8, dragState.baseTop + (event.clientY - dragState.startY)), maxTop);
+      radarOverlay.style.left = `${nextLeft}px`;
+      radarOverlay.style.top = `${nextTop}px`;
+      radarOverlay.style.right = "auto";
+      radarOverlay.style.bottom = "auto";
+      return;
+    }
+    if (resizeState) {
+      const maxWidth = Math.floor(window.innerWidth * 0.6);
+      const maxHeight = Math.floor(window.innerHeight * 0.75);
+      const width = Math.min(
+        Math.max(200, resizeState.startWidth + (event.clientX - resizeState.startX)),
+        maxWidth
+      );
+      const height = Math.min(
+        Math.max(200, resizeState.startHeight + (event.clientY - resizeState.startY)),
+        maxHeight
+      );
+      radarOverlay.style.width = `${width}px`;
+      radarOverlay.style.height = `${height}px`;
+      resizeRadarCanvas();
+      clampOverlayToViewport();
+    }
+  };
+
+  const onPointerUp = () => {
+    if (dragState) title.classList.remove("dragging");
+    dragState = null;
+    resizeState = null;
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerUp);
   };
 
   title.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
     event.preventDefault();
-    dragging = true;
-    startX = event.clientX;
-    startY = event.clientY;
-    baseLeft = radarOverlay.offsetLeft;
-    baseTop = radarOverlay.offsetTop;
+    dragState = {
+      startX: event.clientX,
+      startY: event.clientY,
+      baseLeft: radarOverlay.offsetLeft,
+      baseTop: radarOverlay.offsetTop
+    };
     title.classList.add("dragging");
-    title.setPointerCapture(event.pointerId);
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp, { once: true });
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp, { once: true });
   });
+
+  if (resizeHandle) {
+    resizeHandle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      resizeState = {
+        startX: event.clientX,
+        startY: event.clientY,
+        startWidth: radarOverlay.offsetWidth,
+        startHeight: radarOverlay.offsetHeight
+      };
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp, { once: true });
+    });
+  }
+
+  const resizeObserver = new ResizeObserver(() => {
+    clampOverlayToViewport();
+    resizeRadarCanvas();
+  });
+  resizeObserver.observe(radarOverlay);
+
+  window.addEventListener("resize", clampOverlayToViewport);
+  clampOverlayToViewport();
+  resizeRadarCanvas();
 }
 
 const sliderEquationMap = {
